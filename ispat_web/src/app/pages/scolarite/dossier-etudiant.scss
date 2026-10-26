@@ -1,0 +1,223 @@
+.retour {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ispat-vert);
+  text-decoration: none;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.progression {
+  margin-bottom: 8px;
+}
+
+.entete {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  gap: 24px;
+  margin-bottom: 16px;
+
+  @media (max-width: 700px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.photo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  img,
+  .initiales {
+    width: 170px;
+    aspect-ratio: 3 / 4;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 1px solid #e3e9e6;
+  }
+
+  .initiales {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--ispat-vert-clair);
+    color: var(--ispat-vert);
+    font-family: var(--ispat-police-titres);
+    font-size: 2.4rem;
+    font-weight: 700;
+  }
+}
+
+.photo-etat {
+  position: absolute;
+  top: 8px;
+}
+
+.ligne-titre {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  h1 {
+    margin: 0;
+  }
+}
+
+.matricule-grand {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--ispat-vert);
+  margin: 4px 0 12px;
+  letter-spacing: 0.04em;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px 20px;
+  margin: 0 0 16px;
+
+  dt {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6c8079;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.actions-entete {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.colonnes {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.titre-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  h2 {
+    margin: 0 0 12px;
+  }
+}
+
+.inscription {
+  border: 1px solid #e3e9e6;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.insc-tete {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.observations {
+  white-space: pre-line;
+  font-size: 0.85rem;
+  background: #f6f8f7;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin: 8px 0 0;
+}
+
+.insc-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.contact {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #edf1ef;
+
+  div {
+    flex: 1;
+  }
+
+  mat-icon {
+    color: var(--ispat-vert);
+  }
+}
+
+.pieces-bloc {
+  margin-bottom: 32px;
+}
+
+.manquantes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ispat-orange-clair);
+  color: #7a3b04;
+  padding: 8px 12px;
+  border-radius: 8px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.ok {
+  color: var(--ispat-vert);
+}
+
+.boutons {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ajout-pieces {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.pastille mat-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.contact strong + .texte-secondaire {
+  margin-left: 6px;
+}

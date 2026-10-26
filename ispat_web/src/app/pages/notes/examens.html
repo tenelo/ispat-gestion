@@ -1,0 +1,114 @@
+<div class="page large">
+  <div class="page-entete">
+    <div>
+      <h1>{{ titre }}</h1>
+      <p class="sous-titre">
+        @if (mode === 'validation') { Les notes d'examen validées sont figées ; elles sont nécessaires pour valider les moyennes. }
+        @else { Correction d'une note d'examen déjà validée, avec motif ; chaque modification est conservée dans l'historique. }
+      </p>
+    </div>
+  </div>
+
+  @if (!reseau.enLigne()) {
+    <p class="carte vide">Connexion nécessaire pour cet écran.</p>
+  } @else {
+    @if (chargement()) { <mat-progress-bar mode="indeterminate" /> }
+    <section class="carte filtres">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Classe</mat-label>
+        <mat-select [value]="classeId()" (selectionChange)="classeId.set($event.value)" data-test="ex-classe">
+          <mat-option value="">Toutes</mat-option>
+          @for (c of classes(); track c[0]) { <mat-option [value]="c[0]">{{ c[1] }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Afficher</mat-label>
+        <mat-select [value]="etat()" (selectionChange)="etat.set($event.value)">
+          <mat-option value="a_valider">À valider</mat-option>
+          <mat-option value="validees">Validées</mat-option>
+          <mat-option value="tous">Tous les examens</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </section>
+
+    <section class="carte bloc">
+      <div class="defilement-horizontal">
+        <table class="tableau" data-test="liste-examens">
+          <thead><tr><th>Classe</th><th>Sem.</th><th>Matière</th><th>Examen</th><th>Date</th><th class="centre">Notes</th><th class="centre">Validées</th></tr></thead>
+          <tbody>
+            @for (e of liste(); track e.id) {
+              <tr class="cliquable" [class.actif-ligne]="e.id === examenId()" (click)="ouvrir(e.id)">
+                <td>{{ e.classe_libelle }}</td><td>S{{ e.semestre_numero }}</td><td><strong>{{ e.matiere_code }}</strong> {{ e.matiere_libelle }}</td>
+                <td>{{ e.libelle }}{{ e.session === 2 ? ' (2e session)' : '' }}</td><td>{{ e.date_eval | date: 'dd/MM/yyyy' }}</td>
+                <td class="centre">{{ e.nb_notes }}</td>
+                <td class="centre">@if (e.nb_validees) { <span class="pastille">{{ e.nb_validees }}</span> } @else { — }</td>
+              </tr>
+            } @empty { <tr><td colspan="7" class="vide">Aucun examen.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    @if (grille(); as g) {
+      <section class="carte">
+        <div class="titre-section">
+          <div>
+            <h2>{{ g.evaluation.matiere_code }} — {{ g.evaluation.libelle }}</h2>
+            <span class="texte-secondaire">{{ g.evaluation.classe_libelle }} · semestre {{ g.evaluation.semestre_numero }}</span>
+          </div>
+          @if (mode === 'validation' && peutValider()) {
+            <button mat-flat-button (click)="valider()" data-test="valider-examen">
+              <mat-icon>task_alt</mat-icon> Valider les notes
+            </button>
+          }
+        </div>
+        <div class="stats">
+          <span>Effectif <strong>{{ g.statistiques.effectif }}</strong></span>
+          <span>Notes <strong>{{ g.statistiques.notes }}</strong></span>
+          <span>Absents <strong>{{ g.statistiques.absents }}</strong></span>
+          <span>Manquantes <strong data-test="ex-manquantes">{{ g.statistiques.manquantes }}</strong></span>
+          <span>Moyenne <strong>{{ g.statistiques.moyenne !== null ? ecrireNote(g.statistiques.moyenne) : '—' }}</strong></span>
+          <span>Sous 10 <strong>{{ g.statistiques.sous_la_moyenne }}</strong></span>
+        </div>
+        <div class="defilement-horizontal">
+          <table class="tableau" data-test="grille-examen">
+            <thead><tr><th>N°</th><th>Matricule</th><th>Nom et prénoms</th><th class="centre">Note</th><th class="centre">Statut</th><th></th></tr></thead>
+            <tbody>
+              @for (l of g.etudiants; track l.inscription_id) {
+                <tr>
+                  <td>{{ l.numero }}</td><td class="matricule">{{ l.matricule }}</td><td><strong>{{ l.nom }}</strong> {{ l.prenoms }}</td>
+                  <td class="centre"><strong>{{ l.note ? (l.note.absent ? 'ABS' : ecrireNote(l.note.valeur)) : '—' }}</strong></td>
+                  <td class="centre">
+                    @if (!l.note) { <span class="pastille alerte">Manquante</span> }
+                    @else if (l.note.statut === 'VALIDEE') { <span class="pastille">Validée</span> }
+                    @else { <span class="pastille neutre">Saisie</span> }
+                  </td>
+                  <td class="boutons">
+                    @if (mode === 'modification' && peutModifier() && l.note?.statut === 'VALIDEE') {
+                      <button mat-stroked-button (click)="modifier(l)" data-test="modifier-note"><mat-icon>edit</mat-icon> Modifier</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (mode === 'modification') {
+          <div class="historique">
+            <h3>Historique des modifications</h3>
+            <table class="tableau compact" data-test="historique-notes">
+              <thead><tr><th>Le</th><th>Étudiant</th><th>Ancienne</th><th>Nouvelle</th><th>Motif</th><th>Par</th></tr></thead>
+              <tbody>
+                @for (h of historique(); track h.id) {
+                  <tr><td>{{ h.modifie_le | date: 'dd/MM/yyyy HH:mm' }}</td><td>{{ h.matricule }} {{ h.etudiant }}</td>
+                    <td>{{ valeurHistorique(h.ancienne_valeur) }}</td><td><strong>{{ valeurHistorique(h.nouvelle_valeur) }}</strong></td><td>{{ h.motif }}</td><td>{{ h.modifie_par }}</td></tr>
+                } @empty { <tr><td colspan="6" class="vide">Aucune modification.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
+  }
+</div>

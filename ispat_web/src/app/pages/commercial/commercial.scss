@@ -1,0 +1,158 @@
+// Styles communs des écrans de gestion commerciale.
+.large {
+  max-width: 1400px;
+}
+
+.filtres {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+
+  mat-form-field {
+    flex: 1 1 170px;
+  }
+
+  .large-champ {
+    flex: 3 1 240px;
+  }
+}
+
+.centre {
+  text-align: center !important;
+}
+
+.nb {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.cliquable {
+  cursor: pointer;
+}
+
+.cliquable:hover td {
+  background: #f6faf8;
+}
+
+.boutons {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.fiche {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px 20px;
+  margin-bottom: 12px;
+
+  span {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6c8079;
+  }
+}
+
+h3 {
+  font-family: var(--ispat-police-titres);
+  font-size: 0.95rem;
+  margin: 16px 0 8px;
+  color: var(--ispat-vert-fonce);
+}
+
+.piece {
+  margin: 0 8px 8px 0;
+}
+
+.manquantes {
+  background: var(--ispat-orange-clair);
+  color: #7a3b04;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.groupe {
+  margin-bottom: 16px;
+
+  h2 {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+}
+
+.indicateurs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+
+  .carte {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 16px;
+  }
+
+  span {
+    font-size: 0.8rem;
+    color: #5d6f68;
+  }
+
+  strong {
+    font-family: var(--ispat-police-titres);
+    font-size: 1.35rem;
+    color: var(--ispat-vert-fonce);
+  }
+
+  .accent strong {
+    color: #b45f0b;
+  }
+}
+
+.axes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr));
+  gap: 16px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.taux {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 120px;
+}
+
+.barre {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  max-width: 90px;
+  border-radius: 4px;
+  background: #e8eeeb;
+  overflow: hidden;
+
+  div {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--ispat-vert);
+    border-radius: 4px;
+  }
+
+  &.orange div {
+    background: var(--ispat-orange);
+  }
+}
+
+.compact td,
+.compact th {
+  padding: 6px 8px;
+}

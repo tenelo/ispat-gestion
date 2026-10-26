@@ -1,0 +1,106 @@
+.large {
+  max-width: 1400px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filtres {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+
+  mat-form-field {
+    flex: 1 1 180px;
+  }
+}
+
+.resume {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.chiffre {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 14px 18px;
+
+  .valeur {
+    font-family: var(--ispat-police-titres);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--ispat-vert-fonce);
+  }
+}
+
+.groupe {
+  margin-bottom: 16px;
+}
+
+.nb {
+  text-align: right;
+}
+
+.cliquable {
+  cursor: pointer;
+}
+
+.cliquable:hover td {
+  background: #f6faf8;
+}
+
+.notation {
+  th.note,
+  td.note {
+    text-align: center;
+    min-width: 64px;
+  }
+
+  .type-eval {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .absent {
+    color: var(--ispat-rouge);
+    font-weight: 600;
+  }
+}
+
+.seulement-impression {
+  display: none;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .seulement-impression {
+    display: flex;
+  }
+
+  .entete-impression {
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .carte {
+    border: 0;
+    padding: 0;
+  }
+
+  .page-entete .sous-titre {
+    display: none;
+  }
+}

@@ -1,0 +1,151 @@
+<div class="page large">
+  <div class="page-entete">
+    <div>
+      <h1>{{ titre }}</h1>
+      <p class="sous-titre">Saisie possible sans connexion. Les versements des étudiants s'inscrivent automatiquement en entrée.</p>
+    </div>
+    @if (peutCreer()) {
+      <button mat-flat-button (click)="ouvrir(null)" data-test="nouveau-mouvement">
+        <mat-icon>add</mat-icon> {{ sens === 'ENTREE' ? 'Nouvelle entrée' : 'Nouvelle sortie' }}
+      </button>
+    }
+  </div>
+
+  <section class="carte filtres">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Du</mat-label>
+      <input matInput type="date" [value]="du()" (change)="changerPeriode($any($event.target).value, au())" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Au</mat-label>
+      <input matInput type="date" [value]="au()" (change)="changerPeriode(du(), $any($event.target).value)" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Catégorie</mat-label>
+      <mat-select [value]="categorie()" (selectionChange)="categorie.set($event.value)">
+        <mat-option value="">Toutes</mat-option>
+        @for (c of donnees.value()?.categories ?? []; track c.id) { <mat-option [value]="c.id">{{ c['libelle'] }}</mat-option> }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="large-champ">
+      <mat-icon matPrefix>search</mat-icon>
+      <mat-label>Libellé, tiers, référence</mat-label>
+      <input matInput [value]="texte()" (input)="texte.set($any($event.target).value)" />
+    </mat-form-field>
+  </section>
+
+  <mat-tab-group class="carte" animationDuration="0ms" mat-stretch-tabs="false" (selectedIndexChange)="changerOnglet($event)">
+    <mat-tab label="Écritures">
+      <div class="onglet">
+        <div class="titre-section">
+          <div class="resume-journal">
+            <span>Total : <strong data-test="total-caisse">{{ fcfa(total()) }}</strong> ({{ lignes().length }} écriture(s))</span>
+            @for (c of parCategorie(); track c[0]) { <span class="texte-secondaire">{{ c[0] }} : {{ fcfa(c[1]) }}</span> }
+          </div>
+          <div>
+            @if (sens === 'ENTREE') {
+              <button mat-button (click)="inclureVersements.set(!inclureVersements())" data-test="voir-versements">
+                {{ inclureVersements() ? 'Masquer' : 'Afficher' }} les versements étudiants
+              </button>
+            }
+            @if (peutExporter()) {
+              <button mat-stroked-button (click)="exporter()" [disabled]="!reseau.enLigne()"><mat-icon>download</mat-icon> Excel</button>
+            }
+          </div>
+        </div>
+        <div class="defilement-horizontal">
+          <table class="tableau" data-test="liste-mouvements">
+            <thead><tr><th>Date</th><th>Catégorie</th><th>Libellé</th><th>{{ sens === 'ENTREE' ? 'Versé par' : 'Payé à' }}</th><th>Mode</th><th class="nb">Montant</th><th></th></tr></thead>
+            <tbody>
+              @for (l of lignes(); track l.m.id) {
+                <tr [class.annule]="l.m['annule']">
+                  <td>{{ l.m['date_mouvement'] | date: 'dd/MM/yyyy' }}</td>
+                  <td>{{ l.categorie }}</td>
+                  <td>{{ l.m['libelle'] }}</td>
+                  <td>{{ l.m['tiers'] ?? '—' }}</td>
+                  <td>{{ libelleMode(l.m['mode_paiement']) }}{{ l.m['reference'] ? ' · ' + l.m['reference'] : '' }}</td>
+                  <td class="nb"><strong>{{ fcfa(l.m['montant']) }}</strong></td>
+                  <td class="boutons">
+                    @if (l.m['annule']) { <span class="pastille alerte">Annulée</span> }
+                    @else if (l.m['_en_attente']) { <span class="pastille attente">À envoyer</span> }
+                    @else if (l.m['versement_id']) { <span class="pastille neutre">Versement</span> }
+                    @else {
+                      @if (l.m['justificatif_chemin']) {
+                        <button mat-icon-button (click)="voirJustificatif(l.m)" [disabled]="!reseau.enLigne()" matTooltip="Voir le justificatif"><mat-icon>attach_file</mat-icon></button>
+                      } @else if (peutModifier()) {
+                        <label class="bouton-icone" matTooltip="Joindre un justificatif" [class.desactive]="!reseau.enLigne()">
+                          <input type="file" accept="application/pdf,image/jpeg,image/png" (change)="joindre(l.m, $event)" [disabled]="!reseau.enLigne()" data-test="joindre-justificatif" />
+                          <mat-icon>upload_file</mat-icon>
+                        </label>
+                      }
+                      @if (peutModifier()) {
+                        <button mat-icon-button (click)="ouvrir(l.m)" matTooltip="Modifier" data-test="modifier-mouvement"><mat-icon>edit</mat-icon></button>
+                      }
+                      @if (peutAnnuler()) {
+                        <button mat-icon-button (click)="annuler(l.m)" [disabled]="!reseau.enLigne()" matTooltip="Annuler" data-test="annuler-mouvement"><mat-icon>cancel</mat-icon></button>
+                      }
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="7" class="vide">Aucune écriture sur la période.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </mat-tab>
+
+    @if (voitJournal()) {
+      <mat-tab label="Journal et synthèse">
+        <div class="onglet">
+          @if (!reseau.enLigne()) {
+            <p class="vide">Connexion nécessaire pour le journal de caisse.</p>
+          } @else {
+            @if (chargement()) { <mat-progress-bar mode="indeterminate" /> }
+            @if (synthese(); as s) {
+              <div class="indicateurs">
+                <div class="carte"><span>Solde au {{ du() | date: 'dd/MM/yyyy' }}</span><strong>{{ fcfa(journal()?.solde_initial) }}</strong></div>
+                <div class="carte"><span>Entrées</span><strong data-test="synthese-entrees">{{ fcfa(s.total_entrees) }}</strong></div>
+                <div class="carte"><span>Sorties</span><strong>{{ fcfa(s.total_sorties) }}</strong></div>
+                <div class="carte"><span>Solde au {{ au() | date: 'dd/MM/yyyy' }}</span><strong data-test="solde-final">{{ fcfa(journal()?.solde_final) }}</strong></div>
+              </div>
+              @if (s.par_mois.length > 1) {
+                <h3>Par mois</h3>
+                <table class="tableau compact">
+                  <thead><tr><th>Mois</th><th class="nb">Entrées</th><th class="nb">Sorties</th><th class="nb">Solde du mois</th></tr></thead>
+                  <tbody>
+                    @for (m of s.par_mois; track m.mois) {
+                      <tr><td>{{ libelleMois(m.mois) }}</td><td class="nb">{{ fcfa(m.entrees) }}</td><td class="nb">{{ fcfa(m.sorties) }}</td><td class="nb"><strong>{{ fcfa(m.solde) }}</strong></td></tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            }
+            @if (journal(); as j) {
+              <div class="titre-section">
+                <h3>Journal de caisse</h3>
+                <button mat-stroked-button (click)="exporter(true)"><mat-icon>download</mat-icon> Excel</button>
+              </div>
+              <div class="defilement-horizontal">
+                <table class="tableau compact" data-test="journal-caisse">
+                  <thead><tr><th>Date</th><th>Catégorie</th><th>Libellé</th><th>Mode</th><th class="nb">Entrée</th><th class="nb">Sortie</th><th class="nb">Solde</th></tr></thead>
+                  <tbody>
+                    @for (l of j.lignes; track l.id) {
+                      <tr>
+                        <td>{{ l.date | date: 'dd/MM/yyyy' }}</td><td>{{ l.categorie }}</td><td>{{ l.libelle }}</td><td>{{ libelleMode(l.mode_paiement) }}</td>
+                        <td class="nb">{{ l.entree ? fcfa(l.entree) : '' }}</td><td class="nb">{{ l.sortie ? fcfa(l.sortie) : '' }}</td><td class="nb"><strong>{{ fcfa(l.solde) }}</strong></td>
+                      </tr>
+                    } @empty {
+                      <tr><td colspan="7" class="vide">Aucun mouvement sur la période.</td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          }
+        </div>
+      </mat-tab>
+    }
+  </mat-tab-group>
+</div>

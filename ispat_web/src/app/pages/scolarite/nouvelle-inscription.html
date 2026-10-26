@@ -1,0 +1,271 @@
+<div class="page">
+  <div class="page-entete">
+    <div>
+      <a routerLink="/scolarite/inscriptions" class="retour"><mat-icon>arrow_back</mat-icon> Inscriptions</a>
+      <h1>Nouvelle inscription</h1>
+      <p class="sous-titre">
+        Année {{ ref.value()?.anneeActive?.['libelle'] ?? '—' }} ·
+        @if (reseau.enLigne()) { enregistrée et envoyée aussitôt } @else { hors ligne : enregistrée sur ce poste, envoyée au retour de la connexion }
+      </p>
+    </div>
+  </div>
+
+  @if (ref.value() && !ref.value()!.anneeActive) {
+    <p class="erreur-formulaire">Aucune année académique active : à créer dans Administration → Référentiels.</p>
+  }
+
+  <!-- 1. Étudiant -->
+  <section class="carte bloc">
+    <div class="titre-bloc">
+      <h2><span class="numero">1</span> Étudiant</h2>
+      <mat-button-toggle-group [value]="mode()" (change)="changerMode($event.value)" data-test="mode-etudiant">
+        <mat-button-toggle value="nouveau">Nouvel étudiant</mat-button-toggle>
+        <mat-button-toggle value="existant">Réinscription</mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+
+    @if (mode() === 'existant') {
+      @if (existant(); as x) {
+        <div class="choisi" data-test="etudiant-choisi">
+          <mat-icon>person</mat-icon>
+          <div>
+            <strong>{{ x.etudiant['nom'] }} {{ x.etudiant['prenoms'] }}</strong>
+            <div class="texte-secondaire"><span class="matricule">{{ x.etudiant['matricule'] ?? 'sans matricule' }}</span>
+              @if (x.classe) { · {{ x.classe }} ({{ x.annee }}) }</div>
+          </div>
+          <button mat-button (click)="existant.set(null)">Changer</button>
+        </div>
+      } @else {
+        <mat-form-field appearance="outline" class="plein" subscriptSizing="dynamic">
+          <mat-icon matPrefix>search</mat-icon>
+          <mat-label>Matricule ou nom de l'étudiant</mat-label>
+          <input matInput [value]="recherche()" (input)="recherche.set($any($event.target).value)" data-test="recherche-existant" autocomplete="off" />
+        </mat-form-field>
+        @if (recherche().trim().length >= 2) {
+          <div class="resultats">
+            @for (r of resultats.value() ?? []; track r.etudiant.id) {
+              <button type="button" class="resultat" (click)="choisirExistant(r)" data-test="resultat-existant">
+                <span class="matricule">{{ r.etudiant['matricule'] ?? '—' }}</span>
+                <strong>{{ r.etudiant['nom'] }}</strong> {{ r.etudiant['prenoms'] }}
+                <span class="texte-secondaire">{{ r.classe ?? '' }} {{ r.annee ? '(' + r.annee + ')' : '' }}</span>
+              </button>
+            } @empty {
+              <p class="texte-secondaire">Aucun étudiant trouvé sur ce poste.</p>
+            }
+          </div>
+        }
+      }
+    } @else {
+      @if (doublons.value()?.length) {
+        <div class="alerte" data-test="alerte-doublon-etudiant">
+          <mat-icon>warning</mat-icon>
+          <div>
+            <strong>Cet étudiant existe peut-être déjà :</strong>
+            @for (d of doublons.value(); track d.id) {
+              <div>{{ d['matricule'] ?? 'sans matricule' }} — {{ d['nom'] }} {{ d['prenoms'] }}
+                <button mat-button type="button" (click)="choisirExistant({ etudiant: d, classe: null, annee: null, etat: null })">Réinscrire cet étudiant</button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+      <form [formGroup]="etudiant" class="grille-formulaire">
+        <mat-form-field appearance="outline">
+          <mat-label>Nom</mat-label>
+          <input matInput formControlName="nom" class="majuscules" data-test="e-nom" autocomplete="off" />
+          <mat-error>Obligatoire.</mat-error>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Prénoms</mat-label>
+          <input matInput formControlName="prenoms" data-test="e-prenoms" autocomplete="off" />
+          <mat-error>Obligatoire.</mat-error>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Sexe</mat-label>
+          <mat-select formControlName="sexe" data-test="e-sexe">
+            @for (s of sexes; track s[0]) { <mat-option [value]="s[0]">{{ s[1] }}</mat-option> }
+          </mat-select>
+          <mat-error>Obligatoire.</mat-error>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Date de naissance</mat-label>
+          <input matInput type="date" formControlName="date_naissance" data-test="e-naissance" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Lieu de naissance</mat-label>
+          <input matInput formControlName="lieu_naissance" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Nationalité</mat-label>
+          <input matInput formControlName="nationalite" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>N° pièce d'identité</mat-label>
+          <input matInput formControlName="num_piece_identite" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Téléphone</mat-label>
+          <input matInput type="tel" formControlName="telephone" data-test="e-telephone" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>E-mail</mat-label>
+          <input matInput type="email" formControlName="email" />
+          <mat-error>Adresse invalide.</mat-error>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Ville de résidence</mat-label>
+          <mat-select formControlName="ville">
+            <mat-option [value]="null">—</mat-option>
+            @for (v of ref.value()?.villes ?? []; track v.id) { <mat-option [value]="v.id">{{ v['libelle'] }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>École d'origine</mat-label>
+          <mat-select formControlName="ecole_origine">
+            <mat-option [value]="null">—</mat-option>
+            @for (e of ecolesVille(); track e.id) { <mat-option [value]="e.id">{{ e['nom'] }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Série du bac</mat-label>
+          <input matInput formControlName="serie_bac" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Année du bac</mat-label>
+          <input matInput type="number" formControlName="annee_bac" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="pleine-largeur">
+          <mat-label>Adresse</mat-label>
+          <input matInput formControlName="adresse" />
+        </mat-form-field>
+      </form>
+    }
+  </section>
+
+  <!-- 2. Contacts -->
+  @if (mode() === 'nouveau') {
+    <section class="carte bloc">
+      <div class="titre-bloc">
+        <h2><span class="numero">2</span> Parents et personnes à prévenir</h2>
+        <button mat-stroked-button type="button" (click)="ajouterContact()"><mat-icon>add</mat-icon> Ajouter</button>
+      </div>
+      @for (c of contacts.controls; track c; let i = $index) {
+        <div class="contact" [formGroup]="contactGroupe(i)">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Lien</mat-label>
+            <mat-select formControlName="lien">
+              @for (l of liens; track l[0]) { <mat-option [value]="l[0]">{{ l[1] }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Nom et prénoms</mat-label>
+            <input matInput formControlName="nom_complet" [attr.data-test]="'c-nom-' + i" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Téléphone</mat-label>
+            <input matInput type="tel" formControlName="telephone" [attr.data-test]="'c-tel-' + i" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Profession</mat-label>
+            <input matInput formControlName="profession" />
+          </mat-form-field>
+          <mat-checkbox formControlName="est_urgence">À prévenir</mat-checkbox>
+          <button mat-icon-button type="button" (click)="retirerContact(i)" aria-label="Retirer"><mat-icon>delete</mat-icon></button>
+        </div>
+      } @empty {
+        <p class="texte-secondaire">Aucun contact.</p>
+      }
+    </section>
+  }
+
+  <!-- 3. Inscription -->
+  <section class="carte bloc">
+    <h2><span class="numero">{{ mode() === 'nouveau' ? 3 : 2 }}</span> Inscription</h2>
+    <form [formGroup]="inscription" class="grille-formulaire">
+      <mat-form-field appearance="outline">
+        <mat-label>Classe</mat-label>
+        <mat-select formControlName="classe" data-test="i-classe">
+          @for (c of classesActives(); track c.id) { <mat-option [value]="c.id">{{ c['libelle'] }}</mat-option> }
+        </mat-select>
+        <mat-error>Obligatoire.</mat-error>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Statut</mat-label>
+        <mat-select formControlName="statut_etudiant" data-test="i-statut">
+          @for (s of ref.value()?.statuts ?? []; track s.id) { <mat-option [value]="s.id">{{ s['libelle'] }}</mat-option> }
+        </mat-select>
+        <mat-error>Obligatoire.</mat-error>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Type</mat-label>
+        <mat-select formControlName="type_inscription">
+          @for (t of types; track t[0]) { <mat-option [value]="t[0]">{{ t[1] }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Date d'inscription</mat-label>
+        <input matInput type="date" formControlName="date_inscription" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="pleine-largeur">
+        <mat-label>Observations</mat-label>
+        <textarea matInput rows="2" formControlName="observations"></textarea>
+      </mat-form-field>
+    </form>
+  </section>
+
+  <!-- 4. Photo et pièces -->
+  <section class="carte bloc">
+    <h2><span class="numero">{{ mode() === 'nouveau' ? 4 : 3 }}</span> Photo et pièces du dossier</h2>
+    <div class="photo-pieces">
+      <div class="photo">
+        @if (photoUrl()) {
+          <img [src]="photoUrl()" alt="Photo de l'étudiant" data-test="photo-choisie" />
+          <div class="boutons-photo">
+            <button mat-button type="button" (click)="photoDialogue()">Reprendre</button>
+            <button mat-button type="button" (click)="retirerPhoto()">Retirer</button>
+          </div>
+        } @else {
+          <button type="button" class="photo-vide" (click)="photoDialogue()" data-test="prendre-photo">
+            <mat-icon>add_a_photo</mat-icon>
+            <span>Photo d'identité</span>
+          </button>
+        }
+      </div>
+      <div class="pieces">
+        @for (t of ref.value()?.typesPiece ?? []; track t.id) {
+          @if (t['code'] !== 'PHOTO') {
+            <div class="piece" [attr.data-test]="'piece-' + t['code']">
+              <mat-icon [class.ok]="piecePour(t.id)">{{ piecePour(t.id) ? 'check_circle' : 'description' }}</mat-icon>
+              <div class="piece-texte">
+                <span>{{ t['libelle'] }} @if (t['obligatoire']) { <span class="obligatoire">obligatoire</span> }</span>
+                @if (piecePour(t.id); as p) { <span class="texte-secondaire">{{ p.fichier.name }}</span> }
+              </div>
+              @if (piecePour(t.id)) {
+                <button mat-icon-button type="button" (click)="retirerPiece(t.id)" aria-label="Retirer la pièce"><mat-icon>close</mat-icon></button>
+              } @else {
+                <label class="bouton-fichier">
+                  <input type="file" [accept]="accepte" (change)="ajouterPiece(t.id, $event)" [attr.data-test]="'fichier-' + t['code']" />
+                  <mat-icon>upload</mat-icon> Joindre
+                </label>
+              }
+            </div>
+          }
+        }
+        <p class="texte-secondaire">PDF, JPEG ou PNG, 5 Mo maximum par pièce. Les pièces peuvent aussi être ajoutées plus tard depuis le dossier.</p>
+      </div>
+    </div>
+  </section>
+
+  @if (erreur()) {
+    <p class="erreur-formulaire" data-test="erreur-inscription">{{ erreur() }}</p>
+  }
+  <div class="pied">
+    @if (piecesManquantes().length) {
+      <span class="texte-secondaire manquantes"><mat-icon>info</mat-icon> Pièces obligatoires manquantes : {{ piecesManquantes().join(', ') }}</span>
+    }
+    <a mat-button routerLink="/scolarite/inscriptions">Annuler</a>
+    <button mat-flat-button (click)="enregistrer()" [disabled]="envoi() || !ref.value()?.anneeActive" data-test="enregistrer-inscription">
+      <mat-icon>save</mat-icon> Enregistrer l'inscription
+    </button>
+  </div>
+</div>

@@ -1,0 +1,178 @@
+<div class="page large">
+  <div class="page-entete">
+    <div>
+      <h1>{{ titre }}</h1>
+      <p class="sous-titre">
+        @if (mode === 'notation') { Notes saisies par évaluation (connexion nécessaire). }
+        @else { Étudiants inscrits (inscriptions validées) — fonctionne aussi hors ligne. }
+      </p>
+    </div>
+    <div class="actions no-print">
+      <button mat-stroked-button (click)="imprimer()"><mat-icon>print</mat-icon> Imprimer</button>
+      @if (peutExporter()) {
+        <button mat-stroked-button (click)="exporter('csv')" [disabled]="!reseau.enLigne() || exportEnCours() || !peutLancerExport()" data-test="export-csv">CSV</button>
+        <button mat-flat-button (click)="exporter('xlsx')" [disabled]="!reseau.enLigne() || exportEnCours() || !peutLancerExport()" data-test="export-xlsx"
+                [matTooltip]="reseau.enLigne() ? '' : 'Export possible uniquement en ligne'">
+          <mat-icon>download</mat-icon> Excel
+        </button>
+      }
+    </div>
+  </div>
+
+  <section class="carte filtres no-print">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Année</mat-label>
+      <mat-select [value]="anneeId()" (selectionChange)="anneeId.set($event.value); classeId.set(''); semestreId.set('')">
+        @for (a of ref.value()?.annees ?? []; track a.id) {
+          <mat-option [value]="a.id">{{ a['libelle'] }}{{ a['est_active'] ? ' (active)' : '' }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    @if (mode === 'sexe' || mode === 'statut') {
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Filière</mat-label>
+        <mat-select [value]="filiereId()" (selectionChange)="filiereId.set($event.value)">
+          <mat-option value="">Toutes</mat-option>
+          @for (f of ref.value()?.filieres ?? []; track f.id) { <mat-option [value]="f.id">{{ f['code'] }} — {{ f['libelle'] }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Niveau</mat-label>
+        <mat-select [value]="niveauId()" (selectionChange)="niveauId.set($event.value)">
+          <mat-option value="">Tous</mat-option>
+          @for (n of ref.value()?.niveaux ?? []; track n.id) { <mat-option [value]="n.id">{{ n['code'] }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+    }
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Classe</mat-label>
+      <mat-select [value]="classeId()" (selectionChange)="classeId.set($event.value); matiereId.set('')" data-test="liste-classe-choix">
+        <mat-option value="">{{ mode === 'notation' ? '— choisir —' : 'Toutes' }}</mat-option>
+        @for (c of classesAnnee(); track c.id) { <mat-option [value]="c.id">{{ c['libelle'] }}</mat-option> }
+      </mat-select>
+    </mat-form-field>
+    @if (mode === 'notation') {
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Semestre</mat-label>
+        <mat-select [value]="semestreId()" (selectionChange)="semestreId.set($event.value); matiereId.set('')" data-test="liste-semestre-choix">
+          @for (s of semestresAnnee(); track s.id) { <mat-option [value]="s.id">Semestre {{ s['numero'] }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Matière</mat-label>
+        <mat-select [value]="matiereId()" (selectionChange)="matiereId.set($event.value)">
+          <mat-option value="">Toutes</mat-option>
+          @for (m of matieresClasse(); track m.id) { <mat-option [value]="m.id">{{ m['code'] }} — {{ m['libelle'] }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+    } @else {
+      <mat-checkbox [checked]="inclureAttente()" (change)="inclureAttente.set($event.checked)">Inclure les inscriptions en attente</mat-checkbox>
+    }
+  </section>
+
+  <!-- Impression : en-tête -->
+  <div class="seulement-impression entete-impression">
+    <img src="logo-ispat.png" alt="" width="56" height="56" />
+    <div>
+      <strong>ISPAT — {{ titre }}</strong>
+      <div>{{ ref.value()?.parId?.get(anneeId())?.['libelle'] }} {{ classeId() ? '· ' + ref.value()?.parId?.get(classeId())?.['libelle'] : '' }}</div>
+    </div>
+  </div>
+
+  @if (mode === 'notation') {
+    <section class="carte">
+      @if (!reseau.enLigne()) {
+        <p class="vide">Connexion nécessaire pour la liste de notation.</p>
+      } @else if (!classeId() || !semestreId()) {
+        <p class="vide">Choisir une classe et un semestre.</p>
+      } @else {
+        @if (chargementNotation()) { <mat-progress-bar mode="indeterminate" /> }
+        @if (erreurNotation()) { <p class="erreur-formulaire">{{ erreurNotation() }}</p> }
+        @if (notation(); as n) {
+          <div class="defilement-horizontal">
+            <table class="tableau notation" data-test="table-notation">
+              <thead>
+                <tr>
+                  <th>N°</th><th>Matricule</th><th>Nom et prénoms</th>
+                  @for (ev of n.evaluations; track ev.id) {
+                    <th class="note" [title]="ev.matiere + ' — ' + ev.libelle">{{ ev.matiere_code }}<br /><span class="type-eval">{{ ev.libelle }}</span></th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (e of n.etudiants; track e.inscription_id) {
+                  <tr>
+                    <td>{{ e.numero }}</td>
+                    <td class="matricule">{{ e.matricule }}</td>
+                    <td><strong>{{ e.nom }}</strong> {{ e.prenoms }}</td>
+                    @for (ev of n.evaluations; track ev.id) { <td class="note" [class.absent]="note(e, ev.id) === 'ABS'">{{ note(e, ev.id) }}</td> }
+                  </tr>
+                } @empty {
+                  <tr><td [attr.colspan]="3 + n.evaluations.length" class="vide">Aucun étudiant inscrit dans cette classe.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (!n.evaluations.length) { <p class="texte-secondaire">Aucune évaluation créée pour ce semestre.</p> }
+        }
+      }
+    </section>
+  } @else {
+    <section class="resume">
+      <div class="carte chiffre"><span class="valeur" data-test="total-liste">{{ totaux().total }}</span><span>étudiant(s)</span></div>
+      <div class="carte chiffre"><span class="valeur">{{ totaux().F }}</span><span>fille(s)</span></div>
+      <div class="carte chiffre"><span class="valeur">{{ totaux().M }}</span><span>garçon(s)</span></div>
+    </section>
+
+    @if (mode === 'classe' && !classeId()) {
+      <section class="carte">
+        <h2>Effectifs par classe</h2>
+        <table class="tableau" data-test="effectifs">
+          <thead><tr><th>Classe</th><th class="nb">Total</th><th class="nb">Filles</th><th class="nb">Garçons</th><th class="no-print"></th></tr></thead>
+          <tbody>
+            @for (c of effectifs(); track c.id) {
+              <tr>
+                <td>{{ c.classe }}</td><td class="nb"><strong>{{ c.total }}</strong></td><td class="nb">{{ c.F }}</td><td class="nb">{{ c.M }}</td>
+                <td class="no-print"><button mat-button (click)="classeId.set(c.id)">Voir la liste</button></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="vide">Aucun inscrit.</td></tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    } @else {
+      @for (g of groupes(); track g.cle) {
+        <section class="carte groupe">
+          @if (g.libelle) { <h2>{{ g.libelle }} <span class="texte-secondaire">({{ g.lignes.length }})</span></h2> }
+          <div class="defilement-horizontal">
+            <table class="tableau" [attr.data-test]="'groupe-' + g.cle">
+              <thead>
+                <tr><th>N°</th><th>Matricule</th><th>Nom</th><th>Prénoms</th><th>Sexe</th><th>Naissance</th>
+                  @if (mode !== 'classe' || !classeId()) { <th>Classe</th> }
+                  @if (mode !== 'statut') { <th>Statut</th> }
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of g.lignes; track l.inscription.id; let n = $index) {
+                  <tr class="cliquable" (click)="ouvrir(l.etudiant.id)">
+                    <td>{{ n + 1 }}</td>
+                    <td class="matricule">{{ l.etudiant['matricule'] ?? '—' }}</td>
+                    <td><strong>{{ l.etudiant['nom'] }}</strong></td>
+                    <td>{{ l.etudiant['prenoms'] }}</td>
+                    <td>{{ l.etudiant['sexe'] }}</td>
+                    <td>{{ l.etudiant['date_naissance'] | date: 'dd/MM/yyyy' }}</td>
+                    @if (mode !== 'classe' || !classeId()) { <td>{{ l.classe }}</td> }
+                    @if (mode !== 'statut') { <td>{{ l.statut }}</td> }
+                  </tr>
+                } @empty {
+                  <tr><td colspan="8" class="vide">Aucun étudiant.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+    }
+  }
+</div>

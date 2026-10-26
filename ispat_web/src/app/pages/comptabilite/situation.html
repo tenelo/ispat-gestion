@@ -1,0 +1,143 @@
+<div class="page large">
+  <div class="page-entete">
+    <div>
+      <h1>Situation financière</h1>
+      <p class="sous-titre">Année {{ classes()?.annee ?? '' }} — calculée par le serveur (connexion nécessaire).</p>
+    </div>
+  </div>
+
+  @if (!reseau.enLigne()) {
+    <p class="carte vide">Connexion nécessaire. Hors ligne, la situation de chaque étudiant reste visible à l'écran Versements.</p>
+  } @else {
+    @if (chargement()) { <mat-progress-bar mode="indeterminate" /> }
+    @if (classes(); as c) {
+      <section class="indicateurs">
+        <div class="carte"><span>Total dû</span><strong>{{ fcfa(c.totaux.total_du) }}</strong></div>
+        <div class="carte"><span>Total versé</span><strong data-test="total-verse">{{ fcfa(c.totaux.verse_total) }}</strong></div>
+        <div class="carte"><span>Reste étudiants</span><strong>{{ fcfa(c.totaux.reste_etudiant) }}</strong></div>
+        <div class="carte"><span>Reste organismes</span><strong>{{ fcfa(c.totaux.reste_prise_en_charge) }}</strong></div>
+        <div class="carte"><span>Recouvrement</span><strong data-test="taux-global">{{ c.totaux.taux_recouvrement }} %</strong></div>
+        <div class="carte"><span>Étudiants débiteurs</span><strong>{{ c.totaux.nb_debiteurs }} / {{ c.totaux.effectif }}</strong></div>
+      </section>
+    }
+
+    <mat-tab-group class="carte" animationDuration="0ms" mat-stretch-tabs="false">
+      <mat-tab label="Par classe">
+        <div class="onglet">
+          <div class="titre-section">
+            <span></span>
+            @if (peutExporter()) { <button mat-stroked-button (click)="exporter(true)"><mat-icon>download</mat-icon> Excel</button> }
+          </div>
+          <div class="defilement-horizontal">
+            <table class="tableau" data-test="situation-classes">
+              <thead><tr><th>Classe</th><th class="nb">Effectif</th><th class="nb">Total dû</th><th class="nb">Versé</th><th class="nb">Reste étudiants</th><th class="nb">Débiteurs</th><th class="nb">Recouvrement</th></tr></thead>
+              <tbody>
+                @for (l of classes()?.classes ?? []; track l.classe_id) {
+                  <tr class="cliquable" (click)="voirClasse(l.classe_id)">
+                    <td>{{ l.classe }}</td><td class="nb">{{ l.effectif }}</td><td class="nb">{{ fcfa(l.total_du) }}</td><td class="nb">{{ fcfa(l.verse_total) }}</td>
+                    <td class="nb">{{ fcfa(l.reste_etudiant) }}</td><td class="nb">{{ l.nb_debiteurs }}</td>
+                    <td><div class="taux"><div class="barre-taux"><div [style.width.%]="l.taux_recouvrement"></div></div><strong>{{ l.taux_recouvrement }} %</strong></div></td>
+                  </tr>
+                } @empty { <tr><td colspan="7" class="vide">Aucune inscription validée.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </mat-tab>
+      <mat-tab label="Par étudiant">
+        <div class="onglet">
+          <div class="filtres">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Classe</mat-label>
+              <mat-select [value]="classe()" (selectionChange)="classe.set($event.value)">
+                <mat-option value="">Toutes</mat-option>
+                @for (c of listeClasses(); track c.id) { <mat-option [value]="c.id">{{ c.libelle }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Solde</mat-label>
+              <mat-select [value]="solde()" (selectionChange)="solde.set($event.value)" data-test="filtre-solde">
+                <mat-option value="">Tous</mat-option>
+                <mat-option value="debiteur">Débiteurs</mat-option>
+                <mat-option value="solde">Soldés</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>État</mat-label>
+              <mat-select [value]="etat()" (selectionChange)="etat.set($event.value)">
+                <mat-option value="">Tous</mat-option>
+                <mat-option value="VALIDEE">Inscrits</mat-option>
+                <mat-option value="ABANDON">Abandons</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="large-champ">
+              <mat-icon matPrefix>search</mat-icon>
+              <mat-label>Matricule ou nom</mat-label>
+              <input matInput [value]="q()" (change)="q.set($any($event.target).value)" />
+            </mat-form-field>
+            @if (peutExporter()) { <button mat-stroked-button (click)="exporter(false)"><mat-icon>download</mat-icon> Excel</button> }
+          </div>
+          <div class="defilement-horizontal">
+            <table class="tableau" data-test="situation-etudiants">
+              <thead><tr><th>Matricule</th><th>Étudiant</th><th>Classe</th><th class="nb">Total dû</th><th class="nb">Prise en charge</th><th class="nb">Versé</th><th class="nb">Reste étudiant</th></tr></thead>
+              <tbody>
+                @for (l of etudiants()?.etudiants ?? []; track l.inscription_id) {
+                  <tr class="cliquable" (click)="ouvrir(l.inscription_id, detailModele)">
+                    <td class="matricule">{{ l.matricule }}</td>
+                    <td><strong>{{ l.nom }}</strong> {{ l.prenoms }} @if (l.etat === 'ABANDON') { <span class="pastille alerte">Abandon</span> }</td>
+                    <td>{{ l.classe }}</td><td class="nb">{{ fcfa(l.total_du) }}</td><td class="nb">{{ fcfa(l.part_prise_en_charge) }}</td>
+                    <td class="nb">{{ fcfa(l.verse_etudiant + l.verse_prise_en_charge) }}</td>
+                    <td class="nb"><strong [class.solde]="l.reste_etudiant == 0">{{ fcfa(l.reste_etudiant) }}</strong></td>
+                  </tr>
+                } @empty { <tr><td colspan="7" class="vide">Aucun étudiant pour ces critères.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+          @if (etudiants(); as e) {
+            <p class="texte-secondaire">{{ e.nombre }} étudiant(s) · reste à recouvrer : <strong>{{ fcfa(e.totaux.reste_etudiant) }}</strong></p>
+          }
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  }
+</div>
+
+<ng-template #detailModele>
+  @if (detail(); as d) {
+    <h2 mat-dialog-title>{{ d.inscription.etudiant_nom }} {{ d.inscription.etudiant_prenoms }} — {{ d.inscription.etudiant_matricule }}</h2>
+    <mat-dialog-content data-test="detail-situation">
+      <p class="texte-secondaire">{{ d.inscription.classe_libelle }} · {{ d.inscription.annee_libelle }} · {{ d.inscription.statut_etudiant_libelle }}</p>
+      <table class="tableau compact">
+        <thead><tr><th>Frais</th><th class="nb">Montant</th><th class="nb">Remise</th><th class="nb">Dû</th><th class="nb">Versé</th></tr></thead>
+        <tbody>
+          @for (f of d.situation.frais; track f.frais_id) {
+            <tr><td>{{ f.libelle }}</td><td class="nb">{{ fcfa(f.montant) }}</td><td class="nb">{{ f.remise ? fcfa(f.remise) : '—' }}</td><td class="nb">{{ fcfa(f.du) }}</td><td class="nb">{{ fcfa(f.verse_impute) }}</td></tr>
+          }
+        </tbody>
+      </table>
+      @for (p of d.prises_en_charge; track p.id) {
+        <p class="pec">{{ p.organisme }} : {{ fcfa(p.montant) }} ({{ p.statut }})</p>
+      }
+      <div class="totaux">
+        <div><span>Total dû</span><strong>{{ fcfa(d.situation.total_du) }}</strong></div>
+        <div><span>Versé</span><strong>{{ fcfa(d.situation.verse_total) }}</strong></div>
+        <div class="reste"><span>Reste étudiant</span><strong>{{ fcfa(d.situation.reste_etudiant) }}</strong></div>
+      </div>
+      <h3>Versements</h3>
+      <table class="tableau compact">
+        <tbody>
+          @for (v of d.versements; track v.id) {
+            <tr [class.annule]="v.annule"><td>{{ v.date_versement | date: 'dd/MM/yyyy' }}</td><td class="matricule">{{ v.numero_recu }}</td>
+              <td>{{ v.type_frais_libelle ?? 'Global' }}</td><td>{{ libelleMode(v.mode_paiement) }}</td><td class="nb">{{ fcfa(v.montant) }}</td></tr>
+          } @empty { <tr><td class="vide">Aucun versement.</td></tr> }
+        </tbody>
+      </table>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button mat-dialog-close>Fermer</button>
+      @if (peutEncaisser() && d.situation.reste_etudiant > 0) {
+        <button mat-flat-button (click)="encaisser(d.inscription.id)" data-test="aller-encaisser"><mat-icon>payments</mat-icon> Encaisser</button>
+      }
+    </mat-dialog-actions>
+  }
+</ng-template>

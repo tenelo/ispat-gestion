@@ -1,0 +1,152 @@
+<mat-toolbar class="barre">
+  @if (mobile()) {
+    <button mat-icon-button (click)="menu.toggle()" aria-label="Menu">
+      <mat-icon>menu</mat-icon>
+    </button>
+  }
+  <a routerLink="/" class="marque">
+    <img src="logo-ispat.png" alt="" width="36" height="36" />
+    <span class="marque-texte">
+      <strong>ISPAT</strong>
+      @if (!mobile()) {
+        <small>Gestion de l'établissement</small>
+      }
+    </span>
+  </a>
+
+  <span class="espace"></span>
+
+  <a
+    routerLink="/synchronisation"
+    class="etat"
+    [class]="etatReseau().classe"
+    [matTooltip]="sync.derniereErreur() ?? 'Voir la synchronisation'"
+    data-test="etat-reseau"
+  >
+    @if (sync.enCours()) {
+      <mat-progress-spinner mode="indeterminate" diameter="16" strokeWidth="2" />
+    } @else {
+      <mat-icon>{{ etatReseau().icone }}</mat-icon>
+    }
+    @if (!mobile()) {
+      <span>{{ sync.enCours() ? 'Synchronisation…' : etatReseau().libelle }}</span>
+    }
+    @if (sync.aEnvoyer() > 0) {
+      <span class="compteur attente" data-test="nb-attente" matTooltip="Saisies en attente d'envoi">
+        {{ sync.aEnvoyer() }}
+      </span>
+    }
+    @if (sync.aResoudre() > 0) {
+      <span class="compteur alerte" data-test="nb-a-resoudre" matTooltip="Conflits ou refus à traiter">
+        {{ sync.aResoudre() }}
+      </span>
+    }
+  </a>
+
+  @if (installation.disponible()) {
+    <button mat-stroked-button class="installer" (click)="installation.installer()" data-test="installer">
+      <mat-icon>install_desktop</mat-icon>
+      @if (!mobile()) {
+        Installer l'application
+      }
+    </button>
+  }
+
+  <button mat-button class="utilisateur" [matMenuTriggerFor]="menuUtilisateur" data-test="menu-utilisateur">
+    <span class="avatar">{{ initiales() }}</span>
+    @if (!mobile()) {
+      <span class="nom">{{ auth.utilisateur()?.prenoms }} {{ auth.utilisateur()?.nom }}</span>
+    }
+  </button>
+  <mat-menu #menuUtilisateur="matMenu" xPosition="before">
+    <div class="profil" (click)="$event.stopPropagation()">
+      <strong>{{ auth.utilisateur()?.prenoms }} {{ auth.utilisateur()?.nom }}</strong>
+      <span>{{ auth.utilisateur()?.login }}</span>
+      <span class="roles" data-test="roles">{{ auth.libelleRoles() }}</span>
+    </div>
+    <button mat-menu-item (click)="changerMotDePasse()" [disabled]="!reseau.enLigne()" data-test="changer-mdp">
+      <mat-icon>password</mat-icon>
+      Changer mon mot de passe
+    </button>
+    <button mat-menu-item routerLink="/synchronisation">
+      <mat-icon>sync</mat-icon>
+      Synchronisation
+    </button>
+    <button mat-menu-item (click)="deconnecter()" data-test="deconnexion">
+      <mat-icon>logout</mat-icon>
+      Se déconnecter
+    </button>
+  </mat-menu>
+</mat-toolbar>
+
+@if (auth.reconnexionRequise()) {
+  <div class="bandeau" data-test="reconnexion">
+    <mat-icon>lock_clock</mat-icon>
+    <span>Votre session a expiré. Reconnectez-vous pour envoyer vos saisies et recevoir les mises à jour.</span>
+    <a mat-flat-button routerLink="/connexion">Se reconnecter</a>
+  </div>
+}
+
+<mat-sidenav-container class="conteneur">
+  <mat-sidenav
+    #menu
+    class="menu"
+    [mode]="mobile() ? 'over' : 'side'"
+    [opened]="!mobile()"
+    [fixedInViewport]="mobile()"
+    fixedTopGap="64"
+  >
+    <mat-nav-list data-test="menu" aria-label="Menu principal">
+      <a mat-list-item routerLink="/tableau-de-bord" routerLinkActive="actif" class="lien">
+        <mat-icon matListItemIcon>dashboard</mat-icon>
+        <span matListItemTitle>Tableau de bord</span>
+      </a>
+      @for (g of groupes(); track g.libelle) {
+        @let ouvert = estOuvert(g.libelle);
+        <button type="button" class="groupe" [class.ouvert]="ouvert" (click)="basculer(g.libelle)"
+                [attr.aria-expanded]="ouvert" [attr.data-test]="'groupe-' + g.libelle">
+          <mat-icon>{{ g.icone }}</mat-icon>
+          <span class="groupe-libelle">{{ g.libelle }}</span>
+          <mat-icon class="fleche">expand_more</mat-icon>
+        </button>
+        <div class="sous-menu" [class.ouvert]="ouvert">
+          <div class="sous-menu-interieur">
+            @for (e of g.entrees; track e.chemin) {
+              <a mat-list-item [routerLink]="'/' + e.chemin" routerLinkActive="actif" class="lien" [attr.data-test]="'menu-' + e.chemin"
+                 [attr.tabindex]="ouvert ? null : -1">
+                <mat-icon matListItemIcon>{{ e.icone }}</mat-icon>
+                <span matListItemTitle>{{ e.libelle }}</span>
+              </a>
+            }
+          </div>
+        </div>
+      }
+      @let horsLigneOuvert = estOuvert('Hors ligne');
+      <button type="button" class="groupe" [class.ouvert]="horsLigneOuvert" (click)="basculer('Hors ligne')"
+              [attr.aria-expanded]="horsLigneOuvert" data-test="groupe-Hors ligne">
+        <mat-icon>cloud_sync</mat-icon>
+        <span class="groupe-libelle">Hors ligne</span>
+        @if (sync.aResoudre() > 0 && !horsLigneOuvert) {
+          <span class="compteur alerte">{{ sync.aResoudre() }}</span>
+        }
+        <mat-icon class="fleche">expand_more</mat-icon>
+      </button>
+      <div class="sous-menu" [class.ouvert]="horsLigneOuvert">
+        <div class="sous-menu-interieur">
+          <a mat-list-item routerLink="/synchronisation" routerLinkActive="actif" class="lien"
+             [attr.tabindex]="horsLigneOuvert ? null : -1">
+            <mat-icon matListItemIcon>sync</mat-icon>
+            <span matListItemTitle>Synchronisation</span>
+            @if (sync.aResoudre() > 0) {
+              <span matListItemMeta class="compteur alerte">{{ sync.aResoudre() }}</span>
+            }
+          </a>
+        </div>
+      </div>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="contenu">
+    <router-outlet />
+  </mat-sidenav-content>
+</mat-sidenav-container>

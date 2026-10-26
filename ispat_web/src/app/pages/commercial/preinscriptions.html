@@ -1,0 +1,102 @@
+<div class="page large">
+  <div class="page-entete">
+    <div>
+      <h1>Pré-inscriptions</h1>
+      <p class="sous-titre">Demandes reçues du site internet, du guichet et de la prospection (année active). Connexion nécessaire.</p>
+    </div>
+    @if (peutExporter()) {
+      <button mat-stroked-button (click)="exporter()" [disabled]="!reseau.enLigne()"><mat-icon>download</mat-icon> Excel</button>
+    }
+  </div>
+
+  @if (!reseau.enLigne()) {
+    <p class="carte vide">Connexion nécessaire pour traiter les pré-inscriptions.</p>
+  } @else {
+    <section class="carte filtres">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Statut</mat-label>
+        <mat-select [value]="statut()" (selectionChange)="statut.set($event.value)" data-test="pre-statut">
+          <mat-option value="EN_ATTENTE,VALIDEE">À traiter</mat-option>
+          @for (s of statuts; track s[0]) { <mat-option [value]="s[0]">{{ s[1] }}</mat-option> }
+          <mat-option value="">Toutes</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Source</mat-label>
+        <mat-select [value]="source()" (selectionChange)="source.set($event.value)">
+          <mat-option value="">Toutes</mat-option>
+          <mat-option value="SITE_WEB">Site web</mat-option>
+          <mat-option value="GUICHET">Guichet</mat-option>
+          <mat-option value="PROSPECTION">Prospection</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="large-champ">
+        <mat-icon matPrefix>search</mat-icon>
+        <mat-label>Nom, prénoms ou téléphone</mat-label>
+        <input matInput [value]="q()" (change)="q.set($any($event.target).value)" data-test="pre-recherche" />
+      </mat-form-field>
+    </section>
+
+    @if (chargement()) { <mat-progress-bar mode="indeterminate" /> }
+    <section class="carte">
+      <div class="defilement-horizontal">
+        <table class="tableau" data-test="liste-preinscriptions">
+          <thead><tr><th>Reçue le</th><th>Nom et prénoms</th><th>Sexe</th><th>Téléphone</th><th>Filière souhaitée</th><th>Source</th><th class="centre">Pièces</th><th>Statut</th></tr></thead>
+          <tbody>
+            @for (p of liste(); track p.id) {
+              <tr class="cliquable" (click)="ouvrir(p, detailModele)">
+                <td>{{ p.created_at | date: 'dd/MM/yyyy' }}</td>
+                <td><strong>{{ p.nom }}</strong> {{ p.prenoms }}</td>
+                <td>{{ p.sexe }}</td>
+                <td>{{ p.telephone ?? '—' }}</td>
+                <td>{{ p.filiere_souhaitee_code ?? '—' }} {{ p.niveau_souhaite_code ? '· ' + p.niveau_souhaite_code : '' }}</td>
+                <td><span class="pastille" [class.attente]="p.source === 'SITE_WEB'" [class.neutre]="p.source !== 'SITE_WEB'">{{ sources[p.source] ?? p.source }}</span></td>
+                <td class="centre">{{ p.nb_pieces }}</td>
+                <td><span class="pastille" [class.attente]="p.statut === 'EN_ATTENTE'" [class.alerte]="p.statut === 'REJETEE'" [class.neutre]="p.statut === 'CONVERTIE'">{{ libelleStatut[p.statut] }}</span>
+                  @if (p.matricule) { <span class="matricule">{{ p.matricule }}</span> }</td>
+              </tr>
+            } @empty { <tr><td colspan="8" class="vide">Aucune pré-inscription.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>
+
+<ng-template #detailModele>
+  @if (detail(); as p) {
+    <h2 mat-dialog-title>{{ p.nom }} {{ p.prenoms }}</h2>
+    <mat-dialog-content data-test="detail-preinscription">
+      <div class="fiche">
+        <div><span>Sexe</span>{{ p.sexe === 'F' ? 'Féminin' : 'Masculin' }}</div>
+        <div><span>Naissance</span>{{ p.date_naissance ? (p.date_naissance | date: 'dd/MM/yyyy') : '—' }} {{ p.lieu_naissance ? 'à ' + p.lieu_naissance : '' }}</div>
+        <div><span>Téléphone</span>{{ p.telephone ?? '—' }}</div>
+        <div><span>E-mail</span>{{ p.email ?? '—' }}</div>
+        <div><span>Ville / école</span>{{ p.ville_libelle ?? '—' }} {{ p.ecole_libelle ? '· ' + p.ecole_libelle : '' }}</div>
+        <div><span>Série du bac</span>{{ p.serie_bac ?? '—' }}</div>
+        <div><span>Souhait</span>{{ p.filiere_souhaitee_libelle ?? '—' }} {{ p.niveau_souhaite_code ? '(' + p.niveau_souhaite_code + ')' : '' }}</div>
+        <div><span>Statut</span>{{ libelleStatut[p.statut] }} {{ p.traite_par_nom ? '— ' + p.traite_par_nom : '' }}</div>
+      </div>
+      @if (p.motif_rejet) { <p class="erreur-formulaire">Motif du rejet : {{ p.motif_rejet }}</p> }
+      <h3>Pièces jointes</h3>
+      @if (pieces(); as pc) {
+        @if (pc.pieces_manquantes.length) {
+          <p class="manquantes">Manquantes : {{ libelles(pc.pieces_manquantes) }}</p>
+        }
+        @for (f of pc.pieces; track f.id) {
+          <button mat-stroked-button class="piece" (click)="ouvrirPiece(f)" data-test="piece-preinscription"><mat-icon>description</mat-icon> {{ f.type_piece_libelle }} — {{ f.nom_fichier }}</button>
+        } @empty { <p class="texte-secondaire">Aucune pièce.</p> }
+      } @else { <p class="texte-secondaire">Chargement…</p> }
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button mat-dialog-close>Fermer</button>
+      @if (p.statut === 'EN_ATTENTE' || p.statut === 'VALIDEE') {
+        @if (peutValider()) {
+          <button mat-button (click)="rejeter(p)" data-test="pre-rejeter">Rejeter</button>
+          @if (p.statut === 'EN_ATTENTE') { <button mat-stroked-button (click)="valider(p)" data-test="pre-valider">Accepter le dossier</button> }
+        }
+        @if (peutInscrire()) { <button mat-flat-button (click)="inscrire(p)" data-test="pre-inscrire"><mat-icon>how_to_reg</mat-icon> Inscrire</button> }
+      }
+    </mat-dialog-actions>
+  }
+</ng-template>

@@ -1,0 +1,82 @@
+<div class="page large">
+  <div class="page-entete">
+    <div>
+      <h1>{{ titre }}</h1>
+      <p class="sous-titre">
+        Provisoire : contrôle avant validation (filigrane, non numéroté). Officiel : numéroté et archivé, après validation
+        {{ releve ? 'des notes d\'examen' : 'des moyennes' }}.
+      </p>
+    </div>
+  </div>
+
+  @if (!reseau.enLigne()) {
+    <p class="carte vide">Connexion nécessaire pour éditer les bulletins (PDF générés par le serveur).</p>
+  } @else {
+    <section class="carte filtres">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="large-champ">
+        <mat-label>Classe</mat-label>
+        <mat-select [value]="classeId()" (selectionChange)="classeId.set($event.value)" data-test="b-classe">
+          @for (c of ref.value()?.classes ?? []; track c.id) { <mat-option [value]="c.id">{{ c['libelle'] }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      @if (releve) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Semestre</mat-label>
+          <mat-select [value]="semestreNumero()" (selectionChange)="semestreNumero.set($event.value)" data-test="b-semestre">
+            <mat-option [value]="1">Semestre 1</mat-option>
+            <mat-option [value]="2">Semestre 2</mat-option>
+          </mat-select>
+        </mat-form-field>
+      }
+      <div class="actions-classe">
+        @if (peutProvisoire()) {
+          <button mat-stroked-button (click)="editer(false)" [disabled]="!!enCours() || !etudiants.value()?.length" data-test="classe-provisoire">
+            <mat-icon>visibility</mat-icon> Provisoires de la classe
+          </button>
+        }
+        @if (peutOfficiel()) {
+          <button mat-flat-button (click)="editer(true)" [disabled]="!!enCours() || !etudiants.value()?.length" data-test="classe-officiel">
+            <mat-icon>print</mat-icon> Officiels de la classe
+          </button>
+        }
+      </div>
+    </section>
+
+    @if (enCours()) { <mat-progress-bar mode="indeterminate" /> }
+
+    <section class="carte">
+      <h2>Étudiants ({{ etudiants.value()?.length ?? 0 }})</h2>
+      <div class="defilement-horizontal">
+        <table class="tableau" data-test="liste-bulletins">
+          <thead><tr><th>N°</th><th>Matricule</th><th>Nom et prénoms</th><th>Dernière édition officielle</th><th></th></tr></thead>
+          <tbody>
+            @for (x of etudiants.value() ?? []; track x.inscription.id; let i = $index) {
+              <tr>
+                <td>{{ i + 1 }}</td>
+                <td class="matricule">{{ x.etudiant?.['matricule'] }}</td>
+                <td><strong>{{ x.etudiant?.['nom'] }}</strong> {{ x.etudiant?.['prenoms'] }}
+                  @if (x.inscription['etat'] === 'ABANDON') { <span class="pastille alerte">Abandon</span> }</td>
+                <td>
+                  @if (derniereEdition().get(x.inscription.id); as e) {
+                    <button mat-button class="numero" (click)="archive(e)" [disabled]="!e.fichier_url" matTooltip="Ouvrir la copie archivée" data-test="archive">
+                      <mat-icon>picture_as_pdf</mat-icon> {{ e.numero }}
+                    </button>
+                    <span class="texte-secondaire">{{ e.date_edition | date: 'dd/MM/yyyy HH:mm' }}</span>
+                  } @else { <span class="texte-secondaire">—</span> }
+                </td>
+                <td class="boutons">
+                  @if (peutProvisoire()) {
+                    <button mat-icon-button (click)="editer(false, x.inscription.id)" [disabled]="!!enCours()" matTooltip="Version provisoire" data-test="provisoire"><mat-icon>visibility</mat-icon></button>
+                  }
+                  @if (peutOfficiel()) {
+                    <button mat-icon-button (click)="editer(true, x.inscription.id)" [disabled]="!!enCours()" matTooltip="Édition officielle" data-test="officiel"><mat-icon>print</mat-icon></button>
+                  }
+                </td>
+              </tr>
+            } @empty { <tr><td colspan="5" class="vide">Aucun étudiant inscrit dans cette classe.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>

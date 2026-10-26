@@ -1,0 +1,21 @@
+# Secrets et paramètres du serveur
+.env
+**/.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+ispat_api/media/
+ispat_api/staticfiles/
+
+# Angular / Node
+node_modules/
+ispat_web/dist/
+ispat_web/.angular/
+
+# Archives et sauvegardes
+*.zip
+*.dump
+*.tar.gz
+sauvegardes/

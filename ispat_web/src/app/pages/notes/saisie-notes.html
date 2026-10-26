@@ -1,0 +1,126 @@
+<div class="page large">
+  <div class="page-entete">
+    <div>
+      <h1>Saisie des notes</h1>
+      <p class="sous-titre">Possible sans connexion : les notes sont envoyées à la synchronisation. Entrée = ligne suivante ; une colonne copiée depuis Excel se colle d'un coup.</p>
+    </div>
+  </div>
+
+  @if (cours.value() && !cours.value()!.length) {
+    <p class="carte vide">Aucun cours attribué. L'attribution des cours se fait dans Administration → Référentiels → Attribution des cours.</p>
+  } @else {
+    <section class="carte filtres">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Classe</mat-label>
+        <mat-select [value]="classeId()" (selectionChange)="changerCours($event.value)" data-test="n-classe">
+          @for (c of classes(); track c.id) { <mat-option [value]="c.id">{{ c['libelle'] }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Semestre</mat-label>
+        <mat-select [value]="semestreId()" (selectionChange)="changerCours(undefined, $event.value)" data-test="n-semestre">
+          @for (s of semestres(); track s.id) { <mat-option [value]="s.id">Semestre {{ s['numero'] }}{{ s['cloture'] ? ' (clôturé)' : '' }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="large-champ">
+        <mat-label>Matière</mat-label>
+        <mat-select [value]="matiereId()" (selectionChange)="changerCours(undefined, undefined, $event.value)" data-test="n-matiere">
+          @for (m of matieres(); track m.cle) { <mat-option [value]="m.matiere.id">{{ m.matiere['code'] }} — {{ m.matiere['libelle'] }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+    </section>
+
+    @if (coursChoisi(); as c) {
+      <section class="carte bloc">
+        <div class="titre-section">
+          <h2>Évaluations</h2>
+          @if (peutCreer() && !c.semestre['cloture']) {
+            <button mat-flat-button (click)="nouvelleEvaluation()" data-test="nouvelle-evaluation"><mat-icon>add</mat-icon> Nouvelle évaluation</button>
+          }
+        </div>
+        <div class="evaluations" data-test="liste-evaluations">
+          @for (e of evaluations.value() ?? []; track e.id) {
+            <button type="button" class="evaluation" [class.actif]="e.id === evaluationId()" [class.examen]="e['type_eval'] === 'EXAMEN'"
+                    (click)="evaluationId.set(e.id)" [attr.data-test]="'eval-' + e['libelle']">
+              <strong>{{ libelleEvaluation(e) }}</strong>
+              <span>{{ libelleType[e['type_eval']] }}{{ e['date_eval'] ? ' · ' + (e['date_eval'] | date: 'dd/MM') : '' }}</span>
+              <span class="compte">
+                @if (e['_en_attente']) { <span class="pastille attente">À envoyer</span> }
+                @else { {{ e.nbNotes }} note(s) @if (e.nbValidees) { · <span class="pastille">validées</span> } }
+              </span>
+            </button>
+          } @empty {
+            <p class="texte-secondaire">Aucune évaluation pour cette matière.</p>
+          }
+        </div>
+      </section>
+
+      @if (evaluation(); as e) {
+        <section class="carte">
+          <div class="titre-section">
+            <div>
+              <h2>{{ libelleEvaluation(e) }}</h2>
+              <span class="texte-secondaire">{{ c.matiere['libelle'] }} · {{ c.classe['libelle'] }} · S{{ c.semestre['numero'] }}
+                @if (e['type_eval'] !== 'EXAMEN') { · poids {{ e['poids'] }} }</span>
+            </div>
+            <div class="boutons-entete">
+              @if (peutModifier() && !e['nbValidees']) {
+                <button mat-button (click)="modifierEvaluation(e)"><mat-icon>edit</mat-icon> Modifier</button>
+                <button mat-button (click)="supprimerEvaluation(e)" data-test="supprimer-evaluation"><mat-icon>delete</mat-icon> Supprimer</button>
+              }
+            </div>
+          </div>
+
+          <div class="stats" data-test="stats-notes">
+            <span>Effectif <strong>{{ stats().effectif }}</strong></span>
+            <span>Notes <strong>{{ stats().notes }}</strong></span>
+            <span>Absents <strong>{{ stats().absents }}</strong></span>
+            <span>Manquantes <strong>{{ stats().manquantes }}</strong></span>
+            <span>Moyenne <strong data-test="moyenne-eval">{{ stats().moyenne }}</strong></span>
+            <span>Min / max <strong>{{ stats().min }} / {{ stats().max }}</strong></span>
+            <span>Sous 10 <strong>{{ stats().sous }}</strong></span>
+          </div>
+
+          @if (messageGrille()) { <p class="erreur-formulaire">{{ messageGrille() }}</p> }
+
+          <div class="defilement-horizontal">
+            <table class="tableau grille" data-test="grille-notes">
+              <thead><tr><th>N°</th><th>Matricule</th><th>Nom et prénoms</th><th class="centre">Note /20</th><th class="centre">Absent</th><th></th></tr></thead>
+              <tbody>
+                @for (l of lignes(); track l.inscriptionId; let i = $index) {
+                  <tr [class.verrouillee]="l.verrouillee">
+                    <td>{{ i + 1 }}</td>
+                    <td class="matricule">{{ l.matricule ?? '—' }}</td>
+                    <td><strong>{{ l.nom }}</strong> {{ l.prenoms }}</td>
+                    <td class="centre">
+                      <input class="note" [class.invalide]="invalides().has(l.inscriptionId)" [class.modifiee]="l.texte.trim() !== l.initialTexte"
+                             [value]="l.texte" (input)="saisir(i, $any($event.target).value)" (keydown)="clavier($event, i)" (paste)="coller($event, i)"
+                             [disabled]="l.verrouillee || l.absent" [attr.data-ligne]="i" inputmode="decimal" autocomplete="off"
+                             [attr.aria-label]="'Note de ' + l.nom + ' ' + l.prenoms" />
+                    </td>
+                    <td class="centre"><mat-checkbox [checked]="l.absent" (change)="basculerAbsent(i, $event.checked)" [disabled]="l.verrouillee" [attr.data-test]="'absent-' + i" /></td>
+                    <td>
+                      @if (l.verrouillee) { <mat-icon class="cadenas" matTooltip="Note ou moyenne validée : modification motivée uniquement">lock</mat-icon> }
+                      @else if (l.enAttente) { <span class="pastille attente">À envoyer</span> }
+                    </td>
+                  </tr>
+                } @empty {
+                  @if (!messageGrille()) { <tr><td colspan="6" class="vide">Aucun étudiant inscrit (inscriptions validées) dans cette classe.</td></tr> }
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (peutModifier()) {
+            <div class="pied">
+              <span class="texte-secondaire">{{ modifiees().length }} modification(s) non enregistrée(s)</span>
+              <button mat-button (click)="annulerSaisie()" [disabled]="!modifiees().length">Annuler</button>
+              <button mat-flat-button (click)="enregistrer()" [disabled]="!modifiees().length || envoi()" data-test="enregistrer-notes">
+                <mat-icon>save</mat-icon> Enregistrer les notes
+              </button>
+            </div>
+          }
+        </section>
+      }
+    }
+  }
+</div>

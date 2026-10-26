@@ -1,0 +1,296 @@
+// Styles communs des écrans de notes et moyennes.
+.large {
+  max-width: 1400px;
+}
+
+.bloc {
+  margin-bottom: 16px;
+}
+
+.filtres {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+
+  mat-form-field {
+    flex: 1 1 170px;
+  }
+
+  .large-champ {
+    flex: 3 1 260px;
+  }
+}
+
+.titre-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.boutons-entete {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.evaluations {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.evaluation {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid #e3e9e6;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+
+  span {
+    font-size: 0.8rem;
+    color: #5d6f68;
+  }
+
+  &.examen {
+    border-left: 3px solid var(--ispat-orange);
+  }
+
+  &.actif {
+    border-color: var(--ispat-vert);
+    background: var(--ispat-vert-clair);
+  }
+}
+
+.stats {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f6f8f7;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: #5d6f68;
+
+  strong {
+    color: var(--ispat-vert-fonce);
+    margin-left: 4px;
+  }
+}
+
+.centre {
+  text-align: center !important;
+}
+
+.grille td {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+input.note {
+  width: 72px;
+  height: 34px;
+  text-align: center;
+  font: inherit;
+  font-weight: 600;
+  font-size: 1rem;
+  border: 1px solid #c9d6d1;
+  border-radius: 6px;
+  background: #fff;
+
+  &:focus {
+    outline: 2px solid var(--ispat-vert);
+    border-color: var(--ispat-vert);
+  }
+
+  &.modifiee {
+    background: var(--ispat-orange-clair);
+  }
+
+  &.invalide {
+    border-color: var(--ispat-rouge);
+    background: #fbe9e7;
+    color: var(--ispat-rouge);
+  }
+
+  &:disabled {
+    background: #f2f4f3;
+    color: #7d8c86;
+  }
+}
+
+.verrouillee td {
+  color: #6f7f79;
+}
+
+.cadenas {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: #9aa7a2;
+}
+
+.pied {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+
+  .texte-secondaire {
+    margin-right: auto;
+  }
+}
+
+// Tableau des moyennes (délibération)
+.tableau-moyennes {
+  th,
+  td {
+    text-align: center;
+    padding: 6px 8px;
+    white-space: nowrap;
+  }
+
+  th.gauche,
+  td.gauche {
+    text-align: left;
+  }
+
+  .cellule {
+    cursor: default;
+    border-radius: 4px;
+
+    &.validee {
+      font-weight: 600;
+    }
+
+    &.echec {
+      color: var(--ispat-rouge);
+    }
+
+    &.cliquable {
+      cursor: pointer;
+      text-decoration: underline dotted;
+
+      &:hover {
+        background: var(--ispat-orange-clair);
+      }
+    }
+  }
+
+  .moyenne {
+    font-weight: 700;
+    color: var(--ispat-vert-fonce);
+  }
+}
+
+.indicateurs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+
+  .carte {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px;
+  }
+
+  span {
+    font-size: 0.78rem;
+    color: #5d6f68;
+  }
+
+  strong {
+    font-family: var(--ispat-police-titres);
+    font-size: 1.2rem;
+    color: var(--ispat-vert-fonce);
+  }
+}
+
+.actions-barre {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.info {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--ispat-vert-clair);
+  color: var(--ispat-vert-fonce);
+  margin: 0 0 12px;
+
+  &.attention {
+    background: var(--ispat-orange-clair);
+    color: #7a3b04;
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.historique {
+  margin-top: 16px;
+
+  td {
+    font-size: 0.85rem;
+  }
+}
+
+.cliquable {
+  cursor: pointer;
+}
+
+.cliquable:hover td {
+  background: #f6faf8;
+}
+
+.actif-ligne td {
+  background: var(--ispat-vert-clair) !important;
+}
+
+.compact td,
+.compact th {
+  padding: 6px 10px;
+}
+
+.boutons {
+  text-align: right;
+  white-space: nowrap;
+}
+
+h3 {
+  font-family: var(--ispat-police-titres);
+  font-size: 0.95rem;
+  margin: 16px 0 8px;
+  color: var(--ispat-vert-fonce);
+}
+
+.decision {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}

@@ -1,0 +1,121 @@
+<div class="page large">
+  <div class="page-entete">
+    <div>
+      <h1>{{ titre }}</h1>
+      <p class="sous-titre">
+        @if (mode === 'validation') { Calcul et validation des moyennes d'une classe : moyenne matière = contrôle continu et examen pondérés (Paramètres). }
+        @else { Cliquer sur une moyenne validée ou une décision pour la modifier (motif obligatoire, historique conservé). }
+      </p>
+    </div>
+  </div>
+
+  @if (!reseau.enLigne()) {
+    <p class="carte vide">Connexion nécessaire pour cet écran.</p>
+  } @else {
+    <section class="carte filtres">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Classe</mat-label>
+        <mat-select [value]="classeId()" (selectionChange)="classeId.set($event.value)" data-test="moy-classe">
+          @for (c of ref.value()?.classes ?? []; track c.id) { <mat-option [value]="c.id">{{ c['libelle'] }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Semestre</mat-label>
+        <mat-select [value]="semestreId()" (selectionChange)="semestreId.set($event.value)" data-test="moy-semestre">
+          @for (s of ref.value()?.semestres ?? []; track s.id) { <mat-option [value]="s.id">Semestre {{ s['numero'] }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+    </section>
+
+    @if (chargement() || action()) { <mat-progress-bar mode="indeterminate" /> }
+
+    @if (tableau(); as t) {
+      <section class="indicateurs">
+        <div class="carte"><span>Effectif</span><strong>{{ t.statistiques.effectif }}</strong></div>
+        <div class="carte"><span>Moyenne de classe</span><strong data-test="moyenne-classe">{{ t.statistiques.moyenne_classe !== null ? ecrireNote(t.statistiques.moyenne_classe) : '—' }}</strong></div>
+        <div class="carte"><span>Plus forte / faible</span><strong>{{ ecrireNote(t.statistiques.plus_forte) || '—' }} / {{ ecrireNote(t.statistiques.plus_faible) || '—' }}</strong></div>
+        <div class="carte"><span>Admis</span><strong data-test="nb-admis">{{ t.statistiques.admis }}</strong></div>
+        <div class="carte"><span>Session 2</span><strong>{{ t.statistiques.session2 }}</strong></div>
+        <div class="carte"><span>Réussite</span><strong>{{ t.statistiques.taux_reussite !== null ? t.statistiques.taux_reussite + ' %' : '—' }}</strong></div>
+      </section>
+
+      <section class="carte">
+        <div class="actions-barre">
+          @if (mode === 'validation') {
+            @if (peutCalculer()) {
+              <button mat-stroked-button (click)="calculer()" [disabled]="action() || tousValides() || t.semestre.cloture" data-test="calculer"><mat-icon>calculate</mat-icon> Calculer les moyennes</button>
+            }
+            @if (peutValider()) {
+              <button mat-flat-button (click)="valider()" [disabled]="action() || tousValides() || aucunCalcul()" data-test="valider-moyennes"><mat-icon>verified</mat-icon> Valider</button>
+            }
+          } @else if (peutModifier()) {
+            <button mat-stroked-button (click)="rouvrir()" [disabled]="action() || t.semestre.cloture" data-test="rouvrir"><mat-icon>lock_open</mat-icon> Rouvrir les moyennes</button>
+          }
+          <button mat-button (click)="exporter()"><mat-icon>download</mat-icon> Excel</button>
+        </div>
+        @if (tousValides()) {
+          <p class="info"><mat-icon>verified</mat-icon> Moyennes validées : les bulletins peuvent être édités.</p>
+        } @else if (aucunCalcul()) {
+          <p class="info attention"><mat-icon>info</mat-icon> Moyennes non calculées : saisir les notes, valider les notes d'examen, puis « Calculer ».</p>
+        }
+
+        <div class="defilement-horizontal">
+          <table class="tableau tableau-moyennes" data-test="tableau-moyennes">
+            <thead>
+              <tr>
+                <th class="gauche">N°</th><th class="gauche">Étudiant</th>
+                @for (m of t.matieres; track m.id) { <th [title]="m.libelle">{{ m.code }}<br /><span class="texte-secondaire">coef {{ m.coefficient }}</span></th> }
+                <th>Moyenne</th><th>Crédits</th><th>Rang</th><th>Décision</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (e of t.etudiants; track e.inscription_id) {
+                <tr>
+                  <td class="gauche">{{ e.numero }}</td>
+                  <td class="gauche"><strong>{{ e.nom }}</strong> {{ e.prenoms }}<div class="texte-secondaire">{{ e.matricule }}</div></td>
+                  @for (m of t.matieres; track m.id) {
+                    @let c = cellule(e, m.id);
+                    <td>
+                      <span class="cellule" [class.validee]="c?.statut === 'VALIDEE'" [class.echec]="c && c.moyenne_finale !== null && c.moyenne_finale < 10"
+                            [class.cliquable]="peutModifierCellule(c)" (click)="modifierMoyenne(e, m)" [attr.data-test]="'cellule-' + m.code">
+                        {{ c ? (c.moyenne_finale !== null ? ecrireNote(c.moyenne_finale) : '—') : '' }}
+                      </span>
+                    </td>
+                  }
+                  <td class="moyenne">{{ e.moyenne !== null ? ecrireNote(e.moyenne) : '—' }}</td>
+                  <td>{{ e.credits_total ? e.credits_acquis + '/' + e.credits_total : '—' }}</td>
+                  <td>{{ e.rang ?? '—' }}</td>
+                  <td>
+                    <span class="cellule decision" [class.cliquable]="mode === 'modification' && peutModifier() && !!e.moyenne_semestre_id" (click)="modifierDecision(e)" data-test="decision">
+                      @if (e.decision) { <span class="pastille" [class.attente]="e.decision === 'SESSION2'" [class.alerte]="e.decision === 'AJOURNE'">{{ decisions[e.decision] }}</span> } @else { — }
+                    </span>
+                    @if (mode === 'modification' && peutModifier() && e.moyenne_semestre_id) {
+                      <button mat-icon-button (click)="appreciation(e)" matTooltip="Appréciation du bulletin"><mat-icon>edit_note</mat-icon></button>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td [attr.colspan]="6 + t.matieres.length" class="vide">Aucun étudiant inscrit.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (mode === 'modification') {
+          <div class="historique">
+            <h3>Historique des modifications</h3>
+            <table class="tableau compact" data-test="historique-moyennes">
+              <thead><tr><th>Le</th><th>Étudiant</th><th>Objet</th><th>Champ</th><th>Ancienne</th><th>Nouvelle</th><th>Motif</th><th>Par</th></tr></thead>
+              <tbody>
+                @for (h of historique(); track h.id) {
+                  <tr><td>{{ h.modifie_le | date: 'dd/MM/yyyy HH:mm' }}</td><td>{{ h.matricule }} {{ h.etudiant }}</td><td>{{ h.objet }}</td><td>{{ libelleChamp(h.champ) }}</td>
+                    <td>{{ valeurHistorique(h.ancienne_valeur) }}</td><td><strong>{{ valeurHistorique(h.nouvelle_valeur) }}</strong></td><td>{{ h.motif }}</td><td>{{ h.modifie_par }}</td></tr>
+                } @empty { <tr><td colspan="8" class="vide">Aucune modification.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
+  }
+</div>

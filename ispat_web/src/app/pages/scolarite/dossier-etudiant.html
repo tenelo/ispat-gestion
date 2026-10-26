@@ -1,0 +1,198 @@
+<div class="page">
+  <a routerLink="/scolarite/inscriptions" class="retour"><mat-icon>arrow_back</mat-icon> Inscriptions</a>
+
+  @if (local.value() && !etudiant()) {
+    <div class="carte vide">
+      <span class="material-symbols-outlined">person_off</span>
+      Étudiant introuvable sur ce poste.
+    </div>
+  }
+
+  @if (etudiant(); as e) {
+    @if (action() || chargementServeur()) { <mat-progress-bar mode="indeterminate" class="progression" /> }
+
+    <!-- En-tête : photo + identité -->
+    <section class="carte entete" data-test="dossier-entete">
+      <div class="photo">
+        @if (photoUrl()) {
+          <img [src]="photoUrl()" alt="Photo de l'étudiant" data-test="dossier-photo" />
+        } @else {
+          <div class="initiales">{{ initiales() }}</div>
+        }
+        @if (photoEnAttente()) { <span class="pastille attente photo-etat">Photo à envoyer</span> }
+        @if (peutModifier()) {
+          <button mat-stroked-button class="bouton-photo" (click)="changerPhoto()" data-test="changer-photo">
+            <mat-icon>photo_camera</mat-icon> {{ photoUrl() ? 'Changer' : 'Ajouter' }}
+          </button>
+        }
+      </div>
+      <div class="identite">
+        <div class="ligne-titre">
+          <h1>{{ e['nom'] }} {{ e['prenoms'] }}</h1>
+          @if (enAttente()) {
+            <span class="pastille attente" data-test="dossier-a-envoyer"><mat-icon>schedule</mat-icon> À envoyer</span>
+          }
+        </div>
+        <p class="matricule-grand" data-test="dossier-matricule">{{ e['matricule'] ?? 'Matricule attribué à la validation' }}</p>
+        <dl>
+          <div><dt>Sexe</dt><dd>{{ e['sexe'] === 'F' ? 'Féminin' : 'Masculin' }}</dd></div>
+          <div><dt>Naissance</dt><dd>{{ e['date_naissance'] ? (e['date_naissance'] | date: 'dd/MM/yyyy') : '—' }}{{ e['lieu_naissance'] ? ' à ' + e['lieu_naissance'] : '' }}</dd></div>
+          <div><dt>Téléphone</dt><dd>{{ e['telephone'] ?? '—' }}</dd></div>
+          <div><dt>E-mail</dt><dd>{{ e['email'] ?? '—' }}</dd></div>
+          <div><dt>Nationalité</dt><dd>{{ e['nationalite'] ?? '—' }}</dd></div>
+          <div><dt>Ville</dt><dd>{{ local.value()?.ref?.parId?.get(e['ville_id'])?.['libelle'] ?? '—' }}</dd></div>
+          <div><dt>École d'origine</dt><dd>{{ local.value()?.ref?.parId?.get(e['ecole_origine_id'])?.['nom'] ?? '—' }}</dd></div>
+          <div><dt>Bac</dt><dd>{{ e['serie_bac'] ?? '—' }} {{ e['annee_bac'] ?? '' }}</dd></div>
+        </dl>
+        <div class="actions-entete">
+          @if (peutModifier()) {
+            <button mat-stroked-button (click)="modifierIdentite()" data-test="modifier-identite"><mat-icon>edit</mat-icon> Modifier l'identité</button>
+          }
+          @if (peutReinscrire()) {
+            <a mat-flat-button routerLink="/scolarite/inscriptions/nouvelle" [queryParams]="{ etudiant: e.id }" data-test="reinscrire">
+              <mat-icon>how_to_reg</mat-icon> Inscrire pour {{ anneeActive()?.['libelle'] }}
+            </a>
+          }
+        </div>
+      </div>
+    </section>
+
+    <div class="colonnes">
+      <!-- Inscriptions -->
+      <section class="carte">
+        <h2>Inscriptions</h2>
+        @for (i of inscriptions(); track i.id) {
+          <div class="inscription" [attr.data-test]="'inscription-' + i['etat']">
+            <div class="insc-tete">
+              <div>
+                <strong>{{ i.classe }}</strong>
+                <div class="texte-secondaire">{{ i.annee }} · {{ i.statut }} · {{ types[i['type_inscription']] }}</div>
+              </div>
+              @if (i['_en_attente']) {
+                <span class="pastille attente"><mat-icon>schedule</mat-icon> À envoyer</span>
+              } @else {
+                <span class="pastille" [class]="classeEtat(i['etat'])" data-test="etat-inscription">{{ etats[i['etat']] }}</span>
+              }
+            </div>
+            <div class="texte-secondaire">
+              Inscrit le {{ i['date_inscription'] | date: 'dd/MM/yyyy' }}
+              @if (i['valide_le']) { · validé le {{ i['valide_le'] | date: 'dd/MM/yyyy' }} {{ i['valide_par_nom'] ? 'par ' + i['valide_par_nom'] : '' }} }
+            </div>
+            @if (i['observations']) { <p class="observations">{{ i['observations'] }}</p> }
+            @if (!i['_en_attente']) {
+              <div class="insc-actions">
+                @if (i['etat'] === 'EN_ATTENTE' && peutValider()) {
+                  <button mat-flat-button (click)="valider(i)" [disabled]="!reseau.enLigne() || action()" data-test="valider-inscription"
+                          [matTooltip]="reseau.enLigne() ? '' : 'Validation possible uniquement en ligne'">
+                    <mat-icon>verified</mat-icon> Valider
+                  </button>
+                }
+                @if ((i['etat'] === 'EN_ATTENTE' || i['etat'] === 'VALIDEE') && peutModifier()) {
+                  <button mat-stroked-button (click)="changerClasse(i)" data-test="changer-classe">Changer de classe</button>
+                }
+                @if ((i['etat'] === 'EN_ATTENTE' || i['etat'] === 'VALIDEE') && peutValider()) {
+                  <button mat-button [matMenuTriggerFor]="plus" [disabled]="!reseau.enLigne()" aria-label="Autres actions"><mat-icon>more_horiz</mat-icon> Autres</button>
+                  <mat-menu #plus="matMenu">
+                    <button mat-menu-item (click)="changerEtat(i, 'annuler')" data-test="annuler-inscription"><mat-icon>cancel</mat-icon> Annuler l'inscription</button>
+                    @if (i['etat'] === 'VALIDEE') {
+                      <button mat-menu-item (click)="changerEtat(i, 'abandon')" data-test="abandon-inscription"><mat-icon>logout</mat-icon> Déclarer un abandon</button>
+                    }
+                  </mat-menu>
+                }
+              </div>
+            }
+          </div>
+        } @empty {
+          <p class="texte-secondaire">Aucune inscription.</p>
+        }
+      </section>
+
+      <!-- Contacts -->
+      <section class="carte">
+        <div class="titre-section">
+          <h2>Contacts</h2>
+          @if (peutModifier() && !enAttente()) {
+            <button mat-button (click)="ajouterContact()" data-test="ajouter-contact"><mat-icon>add</mat-icon> Ajouter</button>
+          }
+        </div>
+        @for (c of local.value()?.contacts ?? []; track c.id) {
+          <div class="contact">
+            <mat-icon>{{ c['est_urgence'] ? 'emergency' : 'person' }}</mat-icon>
+            <div>
+              <strong>{{ c['nom_complet'] ?? '—' }}</strong> <span class="texte-secondaire">({{ liens[c['lien']] ?? c['lien'] }})</span>
+              <div class="texte-secondaire">{{ c['telephone'] ?? '' }} {{ c['profession'] ? '· ' + c['profession'] : '' }}</div>
+            </div>
+            @if (peutModifier() && !enAttente() && !c['_en_attente']) {
+              <button mat-icon-button (click)="retirerContact(c)" matTooltip="Retirer"><mat-icon>close</mat-icon></button>
+            }
+          </div>
+        } @empty {
+          <p class="texte-secondaire">Aucun contact.</p>
+        }
+      </section>
+    </div>
+
+    <!-- Pièces -->
+    <section class="carte pieces-bloc">
+      <div class="titre-section">
+        <h2>Pièces du dossier</h2>
+        @if (!reseau.enLigne()) { <span class="texte-secondaire">Hors ligne : pièces déjà envoyées consultables en ligne seulement.</span> }
+      </div>
+      @if (serveur()?.pieces_manquantes?.length) {
+        <p class="manquantes" data-test="pieces-manquantes">
+          <mat-icon>info</mat-icon>
+          Manquantes : {{ serveur()!.pieces_manquantes.map(p => p.libelle).join(', ') }}
+        </p>
+      }
+      <div class="defilement-horizontal">
+        <table class="tableau" data-test="liste-pieces">
+          <tbody>
+            @for (p of serveur()?.pieces ?? []; track p.id) {
+              <tr>
+                <td><mat-icon class="ok">description</mat-icon></td>
+                <td><strong>{{ p.type_piece_libelle }}</strong><div class="texte-secondaire">{{ p.nom_fichier }} · {{ p.taille_octets / 1024 | number: '1.0-0' : 'fr' }} Ko</div></td>
+                <td>@if (p.verifie) { <span class="pastille">Vérifiée</span> } @else { <span class="pastille neutre">À vérifier</span> }</td>
+                <td class="boutons">
+                  <button mat-icon-button (click)="ouvrirPiece(p)" matTooltip="Ouvrir" data-test="ouvrir-piece"><mat-icon>open_in_new</mat-icon></button>
+                  @if (!p.verifie && peutValider()) {
+                    <button mat-icon-button (click)="verifierPiece(p)" matTooltip="Marquer comme vérifiée" data-test="verifier-piece"><mat-icon>task_alt</mat-icon></button>
+                  }
+                  @if (peutModifier()) {
+                    <button mat-icon-button (click)="supprimerPiece(p)" matTooltip="Supprimer"><mat-icon>delete</mat-icon></button>
+                  }
+                </td>
+              </tr>
+            }
+            @for (f of piecesEnAttente(); track f.seq) {
+              <tr>
+                <td><mat-icon>upload_file</mat-icon></td>
+                <td><strong>{{ libelleType(f.type_piece_id ?? '') }}</strong><div class="texte-secondaire">{{ f.nom }}</div></td>
+                <td>
+                  @if (f.statut === 'attente') { <span class="pastille attente">À envoyer</span> }
+                  @else { <span class="pastille alerte" [matTooltip]="f.message ?? ''">Refusée</span> }
+                </td>
+                <td></td>
+              </tr>
+            }
+            @if (!(serveur()?.pieces?.length) && !piecesEnAttente().length) {
+              <tr><td colspan="4" class="vide">Aucune pièce.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (peutModifier()) {
+        <div class="ajout-pieces">
+          <span class="texte-secondaire">Ajouter :</span>
+          @for (t of local.value()?.ref?.typesPiece ?? []; track t.id) {
+            @if (t['code'] !== 'PHOTO') {
+              <label class="bouton-fichier">
+                <input type="file" [accept]="accepte" (change)="ajouterPiece(t.id, inscriptions()[0]?.id ?? null, $event)" [attr.data-test]="'ajout-' + t['code']" />
+                <mat-icon>upload</mat-icon> {{ t['libelle'] }}
+              </label>
+            }
+          }
+        </div>
+      }
+    </section>
+  }
+</div>

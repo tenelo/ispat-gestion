@@ -1,0 +1,301 @@
+// Styles communs des écrans de comptabilité.
+.large {
+  max-width: 1400px;
+}
+
+.bloc {
+  margin-bottom: 16px;
+}
+
+.plein {
+  width: 100%;
+}
+
+.titre-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.filtres {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 12px 0;
+
+  mat-form-field {
+    flex: 1 1 160px;
+  }
+
+  .large-champ {
+    flex: 3 1 240px;
+  }
+}
+
+.raccourcis {
+  display: flex;
+  gap: 4px;
+}
+
+.resultats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.resultat {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid #e3e9e6;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+
+  &:hover {
+    border-color: var(--ispat-vert);
+    background: var(--ispat-vert-clair);
+  }
+}
+
+.etudiant-choisi {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--ispat-vert-clair);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.caisse {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 24px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  button[type='submit'] {
+    height: 46px;
+  }
+}
+
+.compact td,
+.compact th {
+  padding: 6px 10px;
+}
+
+.nb {
+  text-align: right !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.solde {
+  color: var(--ispat-vert);
+}
+
+.pec {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ispat-vert);
+  margin: 8px 0 0;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.totaux {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #f6f8f7;
+  }
+
+  span {
+    font-size: 0.78rem;
+    color: #5d6f68;
+  }
+
+  strong {
+    font-family: var(--ispat-police-titres);
+    font-size: 1.05rem;
+    color: var(--ispat-vert-fonce);
+  }
+
+  .reste {
+    background: var(--ispat-orange-clair);
+
+    strong {
+      color: #9a4a05;
+    }
+  }
+}
+
+.dernier {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--ispat-vert-clair);
+  color: var(--ispat-vert-fonce);
+
+  span {
+    flex: 1;
+  }
+
+  mat-icon {
+    color: var(--ispat-vert);
+  }
+}
+
+h3 {
+  font-family: var(--ispat-police-titres);
+  font-size: 0.95rem;
+  margin: 20px 0 8px;
+  color: var(--ispat-vert-fonce);
+}
+
+.resume-journal {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.annule td {
+  color: #9aa7a2;
+  text-decoration: line-through;
+}
+
+.annule td:last-child {
+  text-decoration: none;
+}
+
+.boutons {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.indicateurs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+
+  .carte {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 16px;
+  }
+
+  span {
+    font-size: 0.8rem;
+    color: #5d6f68;
+  }
+
+  strong {
+    font-family: var(--ispat-police-titres);
+    font-size: 1.25rem;
+    color: var(--ispat-vert-fonce);
+  }
+}
+
+.barre-taux {
+  position: relative;
+  height: 8px;
+  min-width: 90px;
+  border-radius: 4px;
+  background: #e8eeeb;
+  overflow: hidden;
+
+  div {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--ispat-vert);
+    border-radius: 4px;
+  }
+}
+
+.taux {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.cliquable {
+  cursor: pointer;
+}
+
+.cliquable:hover td {
+  background: #f6faf8;
+}
+
+.onglet {
+  padding: 16px 4px 4px;
+}
+
+.bouton-icone {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  vertical-align: middle;
+  color: var(--mat-sys-on-surface-variant);
+
+  &:hover {
+    background: #eef3f1;
+  }
+
+  &.desactive {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+}

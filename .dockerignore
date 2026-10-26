@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/.angular
+**/__pycache__
+**/*.pyc
+**/.env
+**/.venv
+**/media
+ispat_api/staticfiles
+sauvegardes
+.git

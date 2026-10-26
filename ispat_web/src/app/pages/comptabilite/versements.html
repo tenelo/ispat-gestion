@@ -1,0 +1,210 @@
+<div class="page large">
+  <div class="page-entete">
+    <div>
+      <h1>Versements</h1>
+      <p class="sous-titre">Encaissement possible sans connexion ; le numéro de reçu est attribué à la synchronisation.</p>
+    </div>
+  </div>
+
+  @if (peutEncaisser()) {
+    <section class="carte bloc">
+      <h2>Encaisser</h2>
+      @if (dossier.value(); as d) {
+        <div class="etudiant-choisi" data-test="caisse-etudiant">
+          <div>
+            <strong>{{ d.etudiant?.['nom'] }} {{ d.etudiant?.['prenoms'] }}</strong>
+            <div class="texte-secondaire"><span class="matricule">{{ d.etudiant?.['matricule'] }}</span> · {{ d.classe?.['libelle'] }}
+              @if (d.inscription['etat'] === 'ABANDON') { · <span class="pastille alerte">Abandon</span> }</div>
+          </div>
+          <button mat-button (click)="changerInscription(null)">Changer d'étudiant</button>
+        </div>
+
+        <div class="caisse">
+          <div class="situation">
+            <table class="tableau compact" data-test="caisse-frais">
+              <thead><tr><th>Frais</th><th class="nb">Dû</th><th class="nb">Versé</th><th class="nb">Reste</th></tr></thead>
+              <tbody>
+                @for (l of d.situation.frais; track l.fraisId) {
+                  <tr><td>{{ l.libelle }}</td><td class="nb">{{ fcfa(l.du) }}</td><td class="nb">{{ fcfa(l.verse) }}</td>
+                    <td class="nb" [class.solde]="l.reste === 0"><strong>{{ fcfa(l.reste) }}</strong></td></tr>
+                } @empty {
+                  <tr><td colspan="4" class="vide">Aucun frais (tarifs non renseignés ?).</td></tr>
+                }
+              </tbody>
+            </table>
+            @for (p of d.situation.prises; track p.id) {
+              <p class="pec"><mat-icon>volunteer_activism</mat-icon> {{ p.organisme }} prend en charge {{ fcfa(p.montant) }} — reste {{ fcfa(p.reste) }}</p>
+            }
+            <div class="totaux">
+              <div><span>Total dû</span><strong>{{ fcfa(d.situation.totalDu) }}</strong></div>
+              <div><span>Versé (étudiant)</span><strong>{{ fcfa(d.situation.verseEtudiant) }}</strong></div>
+              <div class="reste"><span>Reste à payer (étudiant)</span><strong data-test="reste-etudiant">{{ fcfa(d.situation.resteEtudiant) }}</strong></div>
+            </div>
+          </div>
+
+          <form [formGroup]="f" (ngSubmit)="encaisser()" class="formulaire">
+            @if (erreur()) { <p class="erreur-formulaire" data-test="erreur-versement">{{ erreur() }}</p> }
+            <mat-form-field appearance="outline">
+              <mat-label>Payé par</mat-label>
+              <mat-select formControlName="payeur" data-test="v-payeur">
+                <mat-option value="ETUDIANT">L'étudiant / sa famille</mat-option>
+                @for (p of d.situation.prises; track p.id) { <mat-option [value]="p.id">{{ p.organisme }} (prise en charge)</mat-option> }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Objet</mat-label>
+              <mat-select formControlName="objet" data-test="v-objet">
+                <mat-option value="">Règlement global</mat-option>
+                @for (l of d.situation.frais; track l.fraisId) {
+                  @if (l.reste > 0) { <mat-option [value]="l.typeFraisId">{{ l.libelle }} (reste {{ fcfa(l.reste) }})</mat-option> }
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Montant (FCFA)</mat-label>
+              <input matInput type="number" min="1" formControlName="montant" data-test="v-montant" />
+              <mat-hint>Maximum {{ fcfa(plafond()) }}</mat-hint>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Mode de paiement</mat-label>
+              <mat-select formControlName="mode_paiement" data-test="v-mode">
+                @for (m of modes; track m[0]) { <mat-option [value]="m[0]">{{ m[1] }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+            @if (referenceObligatoire()) {
+              <mat-form-field appearance="outline">
+                <mat-label>Référence (n° de transaction / chèque)</mat-label>
+                <input matInput formControlName="reference" data-test="v-reference" />
+              </mat-form-field>
+            }
+            <mat-form-field appearance="outline">
+              <mat-label>Date</mat-label>
+              <input matInput type="date" formControlName="date_versement" [max]="aujourdhui" />
+            </mat-form-field>
+            <button mat-flat-button type="submit" [disabled]="envoi() || plafond() <= 0" data-test="encaisser">
+              <mat-icon>payments</mat-icon> Encaisser
+            </button>
+            @if (plafond() <= 0) { <p class="texte-secondaire">Rien à encaisser pour ce choix : solde réglé.</p> }
+          </form>
+        </div>
+
+        @if (dernierVersement(); as v) {
+          <div class="dernier" data-test="dernier-versement">
+            <mat-icon>check_circle</mat-icon>
+            <span>{{ fcfa(v['montant']) }} encaissés —
+              @if (v['numero_recu']) { reçu <strong>{{ v['numero_recu'] }}</strong> } @else { reçu numéroté à la synchronisation }</span>
+            @if (v['numero_recu']) {
+              <button mat-stroked-button (click)="recu(v)" [disabled]="!reseau.enLigne()" data-test="imprimer-recu"><mat-icon>print</mat-icon> Imprimer le reçu</button>
+            }
+          </div>
+        }
+
+        @if (d.situation.versements.length) {
+          <h3>Versements de l'étudiant</h3>
+          <table class="tableau compact">
+            <tbody>
+              @for (v of d.situation.versements; track v.id) {
+                <tr [class.annule]="v['annule']">
+                  <td>{{ v['date_versement'] | date: 'dd/MM/yyyy' }}</td>
+                  <td class="matricule">{{ v['numero_recu'] ?? '…' }}</td>
+                  <td>{{ libelleMode(v['mode_paiement']) }}</td>
+                  <td class="nb">{{ fcfa(v['montant']) }}</td>
+                  <td>@if (v['annule']) { <span class="pastille alerte">Annulé</span> } @else if (v['_en_attente']) { <span class="pastille attente">À envoyer</span> }</td>
+                  <td class="boutons">@if (v['numero_recu']) { <button mat-icon-button (click)="recu(v)" [disabled]="!reseau.enLigne()" matTooltip="Reçu PDF"><mat-icon>receipt_long</mat-icon></button> }</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      } @else {
+        <mat-form-field appearance="outline" class="plein" subscriptSizing="dynamic">
+          <mat-icon matPrefix>search</mat-icon>
+          <mat-label>Matricule ou nom de l'étudiant</mat-label>
+          <input matInput [value]="recherche()" (input)="recherche.set($any($event.target).value)" data-test="caisse-recherche" autocomplete="off" />
+        </mat-form-field>
+        @if (recherche().trim().length >= 2) {
+          <div class="resultats">
+            @for (r of resultats.value() ?? []; track r.etudiant.id) {
+              <button type="button" class="resultat" (click)="choisirEtudiant(r)" data-test="caisse-resultat">
+                <span class="matricule">{{ r.etudiant['matricule'] ?? '—' }}</span>
+                <strong>{{ r.etudiant['nom'] }}</strong> {{ r.etudiant['prenoms'] }}
+                <span class="texte-secondaire">{{ r.classe ?? '' }}</span>
+              </button>
+            } @empty { <p class="texte-secondaire">Aucun étudiant trouvé.</p> }
+          </div>
+        }
+      }
+    </section>
+  }
+
+  <section class="carte">
+    <div class="titre-section">
+      <h2>Journal des versements</h2>
+      @if (peutExporter()) {
+        <button mat-stroked-button (click)="exporter()" [disabled]="!reseau.enLigne()"><mat-icon>download</mat-icon> Excel</button>
+      }
+    </div>
+    <div class="filtres">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Du</mat-label>
+        <input matInput type="date" [value]="du()" (change)="du.set($any($event.target).value)" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Au</mat-label>
+        <input matInput type="date" [value]="au()" (change)="au.set($any($event.target).value)" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Mode</mat-label>
+        <mat-select [value]="filtreMode()" (selectionChange)="filtreMode.set($event.value)">
+          <mat-option value="">Tous</mat-option>
+          @for (m of modes; track m[0]) { <mat-option [value]="m[0]">{{ m[1] }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="large-champ">
+        <mat-icon matPrefix>search</mat-icon>
+        <mat-label>N° de reçu, matricule, nom</mat-label>
+        <input matInput [value]="texte()" (input)="texte.set($any($event.target).value)" />
+      </mat-form-field>
+      <div class="raccourcis">
+        <button mat-button (click)="periode(0)">Aujourd'hui</button>
+        <button mat-button (click)="periode(6)">7 jours</button>
+        <button mat-button (click)="periode(30)">30 jours</button>
+      </div>
+    </div>
+    <div class="resume-journal">
+      <span>Total encaissé : <strong data-test="total-journal">{{ fcfa(totalJournal()) }}</strong></span>
+      @for (t of totauxModes(); track t.mode) { <span class="texte-secondaire">{{ t.mode }} : {{ fcfa(t.total) }}</span> }
+    </div>
+    <div class="defilement-horizontal">
+      <table class="tableau" data-test="journal-versements">
+        <thead><tr><th>Date</th><th>N° reçu</th><th>Étudiant</th><th>Classe</th><th>Objet</th><th>Payeur</th><th>Mode</th><th class="nb">Montant</th><th></th></tr></thead>
+        <tbody>
+          @for (l of lignesJournal(); track l.v.id) {
+            <tr [class.annule]="l.v['annule']">
+              <td>{{ l.v['date_versement'] | date: 'dd/MM/yyyy' }}</td>
+              <td class="matricule">{{ l.v['numero_recu'] ?? '…' }}</td>
+              <td><strong>{{ l.etudiant?.['nom'] }}</strong> {{ l.etudiant?.['prenoms'] }}<div class="texte-secondaire">{{ l.etudiant?.['matricule'] }}</div></td>
+              <td>{{ l.classe }}</td>
+              <td>{{ l.objet }}</td>
+              <td>{{ l.payeur }}</td>
+              <td>{{ libelleMode(l.v['mode_paiement']) }}{{ l.v['reference'] ? ' · ' + l.v['reference'] : '' }}</td>
+              <td class="nb"><strong>{{ fcfa(l.v['montant']) }}</strong></td>
+              <td class="boutons">
+                @if (l.v['annule']) { <span class="pastille alerte" [matTooltip]="l.v['motif_annulation'] ?? ''">Annulé</span> }
+                @else if (l.v['_en_attente']) { <span class="pastille attente">À envoyer</span> }
+                @else {
+                  <button mat-icon-button (click)="recu(l.v)" [disabled]="!reseau.enLigne()" matTooltip="Reçu PDF" data-test="journal-recu"><mat-icon>receipt_long</mat-icon></button>
+                  @if (peutAnnuler()) {
+                    <button mat-icon-button (click)="annuler(l.v)" [disabled]="!reseau.enLigne()" matTooltip="Annuler" data-test="journal-annuler"><mat-icon>cancel</mat-icon></button>
+                  }
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="9" class="vide">Aucun versement sur la période.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,285 @@
+// Thème ISPAT : vert de la tenue (couleur principale), orange discret (accent).
+// Palettes générées depuis #0F5A46 et #F07D16 (src/_theme-colors.scss), polices du site : Sora / DM Sans.
+@use '@angular/material' as mat;
+@use './theme-colors' as couleurs;
+
+:root {
+  --ispat-vert: #0f5a46;
+  --ispat-vert-fonce: #0a3f31;
+  --ispat-vert-clair: #e6f2ee;
+  --ispat-orange: #f07d16;
+  --ispat-orange-clair: #fdf0e3;
+  --ispat-rouge: #b3261e;
+  --ispat-police-titres: 'Sora', 'DM Sans Variable', system-ui, sans-serif;
+  --ispat-police-texte: 'DM Sans Variable', system-ui, sans-serif;
+}
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: couleurs.$primary-palette,
+        tertiary: couleurs.$tertiary-palette,
+        theme-type: light,
+      ),
+      typography: (
+        brand-family: 'Sora',
+        plain-family: 'DM Sans Variable',
+        bold-weight: 600,
+        medium-weight: 500,
+        regular-weight: 400,
+      ),
+      density: 0,
+    )
+  );
+  // Vert exact de l'établissement pour les boutons, la barre et les éléments actifs.
+  @include mat.theme-overrides(
+    (
+      primary: #0f5a46,
+      on-primary: #ffffff,
+    )
+  );
+}
+
+body {
+  color-scheme: light;
+  background-color: #f6f8f7;
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  font-family: var(--ispat-police-texte);
+  margin: 0;
+  height: 100%;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--ispat-police-titres);
+  color: var(--ispat-vert-fonce);
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+// --- Éléments communs des écrans ------------------------------------------------------------
+
+.page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+
+  @media (max-width: 600px) {
+    padding: 16px;
+  }
+}
+
+.page-entete {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+
+  .sous-titre {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.carte {
+  background: #fff;
+  border: 1px solid #e3e9e6;
+  border-radius: 12px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.grille-formulaire {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0 16px;
+
+  .pleine-largeur {
+    grid-column: 1 / -1;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.vide {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--mat-sys-on-surface-variant);
+
+  .material-symbols-outlined {
+    font-size: 40px;
+    display: block;
+    margin: 0 auto 8px;
+    color: #9fb5ac;
+  }
+}
+
+// Pastille d'état : « en attente d'envoi » (orange), conflits (rouge), info (vert).
+.pastille {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
+  background: var(--ispat-vert-clair);
+  color: var(--ispat-vert);
+  white-space: nowrap;
+
+  &.attente {
+    background: var(--ispat-orange-clair);
+    color: #9a4a05;
+  }
+
+  &.alerte {
+    background: #fbe9e7;
+    color: var(--ispat-rouge);
+  }
+
+  &.neutre {
+    background: #eef1f0;
+    color: #4a5a54;
+  }
+
+  .material-symbols-outlined {
+    font-size: 14px;
+  }
+}
+
+.tableau {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid #edf1ef;
+    vertical-align: middle;
+  }
+
+  th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #5d6f68;
+    font-weight: 600;
+  }
+
+  tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+.defilement-horizontal {
+  overflow-x: auto;
+}
+
+.matricule {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-weight: 600;
+  color: var(--ispat-vert);
+}
+
+.texte-secondaire {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85rem;
+}
+
+.erreur-formulaire {
+  background: #fbe9e7;
+  color: var(--ispat-rouge);
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+// Bouton « Joindre un fichier » (input file masqué dans un libellé).
+.bouton-fichier {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid #b9cdc5;
+  border-radius: 999px;
+  color: var(--ispat-vert);
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--ispat-vert-clair);
+  }
+
+  input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .material-symbols-outlined,
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// Impression des listes : sans barre ni menu de l'application.
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .barre,
+  .menu,
+  .bandeau,
+  mat-sidenav,
+  .mat-drawer {
+    display: none !important;
+  }
+
+  .mat-drawer-content,
+  .mat-sidenav-content {
+    margin-left: 0 !important;
+  }
+
+  .page {
+    padding: 0;
+    max-width: none;
+  }
+}

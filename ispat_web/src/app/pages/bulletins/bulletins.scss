@@ -1,0 +1,35 @@
+.large {
+  max-width: 1200px;
+}
+
+.filtres {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+
+  mat-form-field {
+    flex: 1 1 170px;
+  }
+
+  .large-champ {
+    flex: 3 1 260px;
+  }
+}
+
+.actions-classe {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.numero {
+  font-family: ui-monospace, Consolas, monospace;
+  font-weight: 600;
+}
+
+.boutons {
+  text-align: right;
+  white-space: nowrap;
+}
